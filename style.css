@@ -128,7 +128,7 @@ small {
 
 .ascii-art iframe {
     display: block;
-    width: 90%;
+    width: 100%;
     height: 1050px;
 
     border: 0;
