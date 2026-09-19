@@ -254,4 +254,25 @@ small {
             }
         }
 
+        
+.language-switcher {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 40px;
+    font-size: 15px;
+}
+
+.language-switcher a,
+.language-switcher strong {
+    color: #111111;
+}
+
+.language-switcher strong {
+    text-decoration: none;
+}
+
+.language-switcher a {
+    text-decoration: underline;
+    text-underline-offset: 4px;
+}
 
