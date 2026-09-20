@@ -1,24 +1,24 @@
 ---
 layout: default
-title: De Afgrond
-breadcrumb: De Afgrond
-description: Een netwerk van mensen, organisaties en ideeën.
-lang: nl
+title: The Abyss
+breadcrumb: The Abyss
+description: Mapping people, organizations and networks spreading disinformation, conspiracy theories, far-right extremism and more.
+lang: en
 translation_key: the-abyss-home
-permalink: /nl/de-afgrond/
+permalink: /the-abyss/
 ---
 
-# De Afgrond
+# The Abyss
 
-Een overzicht van mensen, organisaties en netwerken die desinformatie, complottheorieën, extreemrechts gedachtegoed en meer verspreiden—als onderzoek voor een toekomstige dramaserie die vóór 2050 voltooid moet zijn.
+Mapping people, organizations and networks spreading disinformation, conspiracy theories, far-right extremism and more—as research for a future drama series to be completed before 2050.
 
-{% assign people = site.abyss | where: "lang", "nl" | where: "type", "person" | sort: "title" %}
-{% assign organizations = site.abyss | where: "lang", "nl" | where: "type", "organization" | sort: "title" %}
-{% assign topics = site.abyss | where: "lang", "nl" | where: "type", "topic" | sort: "title" %}
-{% assign events = site.abyss | where: "lang", "nl" | where: "type", "event" | sort: "title" %}
+{% assign people = site.abyss | where: "lang", "en" | where: "type", "person" | sort: "title" %}
+{% assign organizations = site.abyss | where: "lang", "en" | where: "type", "organization" | sort: "title" %}
+{% assign topics = site.abyss | where: "lang", "en" | where: "type", "topic" | sort: "title" %}
+{% assign events = site.abyss | where: "lang", "en" | where: "type", "event" | sort: "title" %}
 
 {% if people.size > 0 %}
-## Personen
+## People
 
 <ul class="abyss-index">
 {% for entry in people %}
@@ -33,7 +33,7 @@ Een overzicht van mensen, organisaties en netwerken die desinformatie, complotth
 {% endif %}
 
 {% if organizations.size > 0 %}
-## Organisaties
+## Organizations
 
 <ul class="abyss-index">
 {% for entry in organizations %}
@@ -48,7 +48,7 @@ Een overzicht van mensen, organisaties en netwerken die desinformatie, complotth
 {% endif %}
 
 {% if topics.size > 0 %}
-## Onderwerpen
+## Topics
 
 <ul class="abyss-index">
 {% for entry in topics %}
@@ -63,7 +63,7 @@ Een overzicht van mensen, organisaties en netwerken die desinformatie, complotth
 {% endif %}
 
 {% if events.size > 0 %}
-## Gebeurtenissen
+## Events
 
 <ul class="abyss-index">
 {% for entry in events %}

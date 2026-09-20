@@ -6,7 +6,7 @@ description: Research notes concerning Shell.
 lang: en
 translation_key: shell
 type: organization
-permalink: /abyss/shell/
+permalink: /the-abyss/shell/
 
 topics:
   - fossil-fuels
