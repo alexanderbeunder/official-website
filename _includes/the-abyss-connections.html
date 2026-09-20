@@ -1,6 +1,12 @@
 {% if page.connections and page.connections.size > 0 %}
 <section class="the-abyss-connections">
-    <h2>Connections</h2>
+    <h2>
+        {% if page.lang == "nl" %}
+            Connecties
+        {% else %}
+            Connections
+        {% endif %}
+    </h2>
 
     <ul>
         {% for connection in page.connections %}
@@ -9,10 +15,23 @@
                 | where: "lang", page.lang
                 | first %}
 
+            {% assign relationship_translations =
+                site.data.relationships[connection.relationship] %}
+
+            {% assign relationship_label =
+                relationship_translations[page.lang] %}
+
+            {% unless relationship_label %}
+                {% assign relationship_label =
+                    connection.relationship
+                    | replace: "-", " "
+                    | capitalize %}
+            {% endunless %}
+
             {% if connected_page %}
                 <li>
                     <span class="relationship">
-                        {{ connection.relationship | replace: "-", " " | capitalize }}:
+                        {{ relationship_label }}:
                     </span>
 
                     <a href="{{ connected_page.url | relative_url }}">
@@ -22,10 +41,18 @@
             {% else %}
                 <li>
                     <span class="relationship">
-                        {{ connection.relationship | replace: "-", " " | capitalize }}:
+                        {{ relationship_label }}:
                     </span>
 
-                    {{ connection.id }} <small>(page not found)</small>
+                    {{ connection.id }}
+
+                    <small>
+                        {% if page.lang == "nl" %}
+                            (pagina niet gevonden)
+                        {% else %}
+                            (page not found)
+                        {% endif %}
+                    </small>
                 </li>
             {% endif %}
         {% endfor %}

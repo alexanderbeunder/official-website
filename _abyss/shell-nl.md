@@ -14,7 +14,7 @@ topics:
 
 connections:
   - id: frits-bottcher
-    relationship: financierde
+    relationship: funded
 ---
 
 # Shell

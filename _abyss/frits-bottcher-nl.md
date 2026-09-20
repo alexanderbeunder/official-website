@@ -13,10 +13,10 @@ topics:
 
 connections:
   - id: shell
-    relationship: ontving-financiering-van
+    relationship: received-funding-from
 
   - id: sepp
-    relationship: verbonden-aan
+    relationship: connected-to
 ---
 
 # Frits Böttcher

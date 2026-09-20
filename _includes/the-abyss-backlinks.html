@@ -7,13 +7,26 @@
                 {% if connection.id == page.entity_id %}
                     {% assign backlink_count = backlink_count | plus: 1 %}
 
+                    {% assign relationship_translations =
+                        site.data.relationships[connection.relationship] %}
+
+                    {% assign relationship_label =
+                        relationship_translations[page.lang] %}
+
+                    {% unless relationship_label %}
+                        {% assign relationship_label =
+                            connection.relationship
+                            | replace: "-", " "
+                            | capitalize %}
+                    {% endunless %}
+
                     <li>
                         <a href="{{ entry.url | relative_url }}">
                             {{ entry.title }}
                         </a>
 
                         <span class="relationship">
-                            — {{ connection.relationship | replace: "-", " " }}
+                            — {{ relationship_label }}
                         </span>
                     </li>
                 {% endif %}
@@ -24,7 +37,13 @@
 
 {% if backlink_count > 0 %}
 <section class="the-abyss-backlinks">
-    <h2>Pages referring to this page</h2>
+    <h2>
+        {% if page.lang == "nl" %}
+            Pagina’s die naar deze pagina verwijzen
+        {% else %}
+            Pages referring to this page
+        {% endif %}
+    </h2>
 
     <ul>
         {{ backlink_items }}
