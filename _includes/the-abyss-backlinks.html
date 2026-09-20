@@ -2,9 +2,9 @@
 
 {% capture backlink_items %}
     {% for entry in site.abyss %}
-        {% if entry.lang == page.lang and entry.id != page.id %}
+        {% if entry.lang == page.lang and entry.entity_id != page.entity_id %}
             {% for connection in entry.connections %}
-                {% if connection.id == page.id %}
+                {% if connection.id == page.entity_id %}
                     {% assign backlink_count = backlink_count | plus: 1 %}
 
                     <li>
