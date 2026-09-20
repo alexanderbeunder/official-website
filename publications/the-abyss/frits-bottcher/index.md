@@ -4,7 +4,7 @@ title: Frits Böttcher
 breadcrumb: Frits Böttcher
 description: His life, work and role in climate denialism
 lang: en
-translation_key: frits-böttcher
+translation_key: frits-bottcher
 ---
 
 # Frits Böttcher
