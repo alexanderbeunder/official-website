@@ -9,7 +9,7 @@ translation_key: the-abyss
 
 # The Abyss
 
-Mapping people, organizations and networks spreading disinformation, conspiracy theories, far-right extremism and more.
+Mapping people, organizations and networks spreading disinformation, conspiracy theories, far-right extremism and more (as research for a future drama series to be completed before 2050).
 
 ## Subjects
 
