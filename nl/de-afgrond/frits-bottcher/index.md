@@ -13,4 +13,4 @@ Frits Böttcher ontving tussen 1990 en 1998 financiering van Shell, Hoogovens, D
 
 ## Related pages
 
-- [Clintel](nl/de-afgrond/clintel)
+- [Clintel](/nl/de-afgrond/clintel)

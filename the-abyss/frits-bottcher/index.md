@@ -13,4 +13,4 @@ Frits Böttcher received funding from Shell, Hoogovens, DSM and 22 other (mostly
 
 ## Related pages
 
-- [Clintel](the-abyss/clintel)
+- [Clintel](/the-abyss/clintel)
