@@ -13,4 +13,4 @@ People, organizations, networks.
 
 ## Subjects
 
-- [Commons](/publications/the-abyss/frits-böttcher/)
+- [Frits Böttcher](/the-abyss/frits-böttcher/)

@@ -5,6 +5,7 @@ breadcrumb: Frits Böttcher
 description: His life, work and role in climate denialism
 lang: en
 translation_key: frits-bottcher
+permalink: /abyss/frits-bottcher/
 ---
 
 # Frits Böttcher
@@ -13,4 +14,4 @@ Frits Böttcher received funding from Shell, Hoogovens, DSM and 22 other (mostly
 
 ## Related pages
 
-- [Clintel](/publications/the-abyss/clintel)
+- [Clintel](the-abyss/clintel)
