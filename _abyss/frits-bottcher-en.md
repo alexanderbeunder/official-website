@@ -1,6 +1,6 @@
 ---
 layout: the-abyss
-id: frits-bottcher
+entity_id: frits-bottcher
 title: Frits Böttcher
 description: His life, work and role in climate denialism.
 lang: en

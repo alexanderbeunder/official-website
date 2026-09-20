@@ -1,6 +1,6 @@
 ---
 layout: the-abyss
-id: frits-bottcher
+entity_id: frits-bottcher
 title: Frits Böttcher
 description: Zijn leven, werk en rol in klimaatontkenning
 lang: nl

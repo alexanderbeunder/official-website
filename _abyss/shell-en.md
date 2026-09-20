@@ -1,6 +1,6 @@
 ---
 layout: the-abyss
-id: shell
+entity_id: shell
 title: Shell
 description: Research concerning Shell and its political and economic networks.
 lang: en
