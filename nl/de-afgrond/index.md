@@ -14,4 +14,4 @@ Het in kaart brengen van mensen, organisaties en netwerken die desinformatie, co
 
 ## Subjects
 
-- [Frits Böttcher](/the-abyss/frits-bottcher/)
+- [Frits Böttcher](nl/the-abyss/frits-bottcher/)
