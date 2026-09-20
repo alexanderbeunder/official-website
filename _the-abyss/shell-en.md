@@ -1,5 +1,5 @@
 ---
-layout: abyss
+layout: the-abyss
 id: shell
 title: Shell
 description: Research notes concerning Shell.

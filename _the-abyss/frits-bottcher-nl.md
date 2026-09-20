@@ -1,5 +1,5 @@
 ---
-layout: abyss
+layout: the-abyss
 id: frits-bottcher
 title: Frits Böttcher
 description: Zijn leven, werk en rol in klimaatontkenning
