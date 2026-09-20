@@ -9,7 +9,7 @@ type: person
 permalink: /nl/de-afgrond/frits-bottcher/
 
 topics:
-  - klimaatontkenning
+  - climate-denial
 
 connections:
   - id: shell
