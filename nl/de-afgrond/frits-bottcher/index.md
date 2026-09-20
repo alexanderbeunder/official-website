@@ -3,7 +3,7 @@ layout: default
 title: Frits Böttcher
 breadcrumb: Frits Böttcher
 description: Zijn leven, werk en rol in klimaatontkenning
-lang: en
+lang: nl
 translation_key: frits-bottcher
 ---
 
