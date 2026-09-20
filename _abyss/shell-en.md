@@ -20,7 +20,3 @@ connections:
 # Shell
 
 Research notes about Shell.
-
-## Sources
-
-1. Add the supporting source here.

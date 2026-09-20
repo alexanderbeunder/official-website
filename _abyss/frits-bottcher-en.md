@@ -22,7 +22,3 @@ connections:
 # Frits Böttcher
 
 Frits Böttcher received funding from Shell, Hoogovens, DSM and 22 other (mostly Dutch) firms and organizations to spread climate denialism in the Netherlands and abroad between 1990-1998.
-
-## Related pages
-
-- [Clintel](/the-abyss/clintel)

@@ -22,7 +22,3 @@ connections:
 # Frits Böttcher
 
 Frits Böttcher ontving financiering van Shell, Hoogoverns, DSM and 22 andere (vooral Nederlandse) bedrijven en organisaties om klimaatontkenning te verspreiden in Nederland en daarbuiten tussen 1990-1998.
-
-## Related pages
-
-- [Clintel](nl/de-afgrond/clintel)
