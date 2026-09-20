@@ -1,0 +1,66 @@
+---
+layout: default
+title: The Abyss
+breadcrumb: The Abyss
+description: Mapping people, organizations and networks.
+lang: en
+translation_key: the-abyss-home
+permalink: /the-abyss/
+---
+
+<h1>The Abyss</h1>
+
+<p>
+    Mapping people, organizations and networks spreading disinformation, conspiracy theories, far-right extremism and more.
+</p>
+
+<h2>People</h2>
+
+<ul>
+    {% assign people = site.the-abyss
+        | where: "lang", "en"
+        | where: "type", "person"
+        | sort: "title" %}
+
+    {% for entry in people %}
+        <li>
+            <a href="{{ entry.url | relative_url }}">
+                {{ entry.title }}
+            </a>
+        </li>
+    {% endfor %}
+</ul>
+
+<h2>Organizations</h2>
+
+<ul>
+    {% assign organizations = site.the-abyss
+        | where: "lang", "en"
+        | where: "type", "organization"
+        | sort: "title" %}
+
+    {% for entry in organizations %}
+        <li>
+            <a href="{{ entry.url | relative_url }}">
+                {{ entry.title }}
+            </a>
+        </li>
+    {% endfor %}
+</ul>
+
+<h2>Topics</h2>
+
+<ul>
+    {% assign topics = site.the-abyss
+        | where: "lang", "en"
+        | where: "type", "topic"
+        | sort: "title" %}
+
+    {% for entry in topics %}
+        <li>
+            <a href="{{ entry.url | relative_url }}">
+                {{ entry.title }}
+            </a>
+        </li>
+    {% endfor %}
+</ul>

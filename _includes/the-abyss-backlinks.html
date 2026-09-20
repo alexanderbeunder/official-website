@@ -1,0 +1,34 @@
+{% assign backlink_count = 0 %}
+
+{% capture backlink_items %}
+    {% for entry in site.the-abyss %}
+        {% if entry.lang == page.lang %}
+            {% for connection in entry.connections %}
+                {% if connection.id == page.id %}
+                    {% assign backlink_count = backlink_count | plus: 1 %}
+
+                    <li>
+                        <a href="{{ entry.url | relative_url }}">
+                            {{ entry.title }}
+                        </a>
+
+                        <span class="relationship">
+                            — {{ connection.relationship
+                                | replace: "-", " " }}
+                        </span>
+                    </li>
+                {% endif %}
+            {% endfor %}
+        {% endif %}
+    {% endfor %}
+{% endcapture %}
+
+{% if backlink_count > 0 %}
+<section class="the-abyss-backlinks">
+    <h2>Pages referring to this page</h2>
+
+    <ul>
+        {{ backlink_items }}
+    </ul>
+</section>
+{% endif %}

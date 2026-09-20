@@ -1,0 +1,30 @@
+{% if page.connections and page.connections.size > 0 %}
+<section class="the-abyss-connections">
+    <h2>Connections</h2>
+
+    <ul>
+        {% for connection in page.connections %}
+
+            {% assign connected_page = site.abyss
+                | where: "id", connection.id
+                | where: "lang", page.lang
+                | first %}
+
+            {% if connected_page %}
+                <li>
+                    <span class="relationship">
+                        {{ connection.relationship
+                            | replace: "-", " "
+                            | capitalize }}:
+                    </span>
+
+                    <a href="{{ connected_page.url | relative_url }}">
+                        {{ connected_page.title }}
+                    </a>
+                </li>
+            {% endif %}
+
+        {% endfor %}
+    </ul>
+</section>
+{% endif %}

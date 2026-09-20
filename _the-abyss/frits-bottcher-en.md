@@ -1,10 +1,11 @@
 ---
-layout: default
+layout: abyss
+id: frits-bottcher
 title: Frits Böttcher
-breadcrumb: Frits Böttcher
-description: His life, work and role in climate denialism
+description: His life, work and role in climate denialism.
 lang: en
 translation_key: frits-bottcher
+type: person
 permalink: /the-abyss/frits-bottcher/
 
 topics:
@@ -13,18 +14,8 @@ topics:
 connections:
   - id: shell
     relationship: received-funding-from
-  - id: hoogovens
-    relationship: received-funding-from
-  - id: dsm
-    relationship: received-funding-from
-  - id: akzonobel
-    relationship: received-funding-from
-  - id: texaco
-    relationship: received-funding-from
-  - id: anwb
-    relationship: received-funding-from
 
-  - id: clintel
+  - id: sepp
     relationship: connected-to
 ---
 
