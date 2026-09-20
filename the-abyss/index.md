@@ -7,10 +7,10 @@ lang: en
 translation_key: wiki-home
 ---
 
-# Knowledge base
+# The Abyss
 
-People, organizations, networks.
+Mapping people, organizations and networks spreading disinformation, conspiracy theories, far-right extremism and more.
 
 ## Subjects
 
-- [Frits Böttcher](/the-abyss/frits-böttcher/)
+- [Frits Böttcher](/the-abyss/frits-bottcher/)
