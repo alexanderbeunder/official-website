@@ -1,7 +1,7 @@
 {% assign backlink_count = 0 %}
 
 {% capture backlink_items %}
-    {% for entry in site.the-abyss %}
+    {% for entry in site.abyss %}
         {% if entry.lang == page.lang %}
             {% for connection in entry.connections %}
                 {% if connection.id == page.id %}
