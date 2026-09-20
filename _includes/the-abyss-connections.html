@@ -4,7 +4,10 @@
 
     <ul>
         {% for connection in page.connections %}
-            {% assign connected_page = site.abyss | where: "id", connection.id | where: "lang", page.lang | first %}
+            {% assign connected_page = site.abyss
+                | where: "entity_id", connection.id
+                | where: "lang", page.lang
+                | first %}
 
             {% if connected_page %}
                 <li>
