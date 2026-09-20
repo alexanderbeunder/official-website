@@ -2,7 +2,7 @@
 layout: the-abyss
 id: shell
 title: Shell
-description: Research notes concerning Shell.
+description: Research concerning Shell and its political and economic networks.
 lang: en
 translation_key: shell
 type: organization
@@ -19,4 +19,4 @@ connections:
 
 # Shell
 
-Research notes about Shell.
+Research notes concerning Shell.

@@ -4,26 +4,27 @@
 
     <ul>
         {% for connection in page.connections %}
-
-            {% assign connected_page = site.abyss
-                | where: "id", connection.id
-                | where: "lang", page.lang
-                | first %}
+            {% assign connected_page = site.abyss | where: "id", connection.id | where: "lang", page.lang | first %}
 
             {% if connected_page %}
                 <li>
                     <span class="relationship">
-                        {{ connection.relationship
-                            | replace: "-", " "
-                            | capitalize }}:
+                        {{ connection.relationship | replace: "-", " " | capitalize }}:
                     </span>
 
                     <a href="{{ connected_page.url | relative_url }}">
                         {{ connected_page.title }}
                     </a>
                 </li>
-            {% endif %}
+            {% else %}
+                <li>
+                    <span class="relationship">
+                        {{ connection.relationship | replace: "-", " " | capitalize }}:
+                    </span>
 
+                    {{ connection.id }} <small>(page not found)</small>
+                </li>
+            {% endif %}
         {% endfor %}
     </ul>
 </section>

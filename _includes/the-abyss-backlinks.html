@@ -2,7 +2,7 @@
 
 {% capture backlink_items %}
     {% for entry in site.abyss %}
-        {% if entry.lang == page.lang %}
+        {% if entry.lang == page.lang and entry.id != page.id %}
             {% for connection in entry.connections %}
                 {% if connection.id == page.id %}
                     {% assign backlink_count = backlink_count | plus: 1 %}
@@ -13,8 +13,7 @@
                         </a>
 
                         <span class="relationship">
-                            — {{ connection.relationship
-                                | replace: "-", " " }}
+                            — {{ connection.relationship | replace: "-", " " }}
                         </span>
                     </li>
                 {% endif %}
