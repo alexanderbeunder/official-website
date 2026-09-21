@@ -10,7 +10,7 @@ permalink: /the-abyss/
 
 # The Abyss
 
-Mapping real people, organizations and networks spreading disinformation, conspiracy theories, far-right extremism and more — as research for a future fictional drama series called The Abyss (working title).
+Mapping real people, organizations and networks spreading disinformation, conspiracy theories, far-right extremism and more — as research The Abyss, a future fictional drama series.
 
 {% assign people = site.abyss | where: "lang", "en" | where: "type", "person" | sort: "title" %}
 {% assign organizations = site.abyss | where: "lang", "en" | where: "type", "organization" | sort: "title" %}
