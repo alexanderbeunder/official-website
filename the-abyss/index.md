@@ -10,7 +10,7 @@ permalink: /the-abyss/
 
 # The Abyss
 
-Mapping people, organizations and networks spreading disinformation, conspiracy theories, far-right extremism and more—as research for a future drama series to be completed before 2050.
+Mapping real people, organizations and networks spreading disinformation, conspiracy theories, far-right extremism and more — as research for a future fictional drama series.
 
 {% assign people = site.abyss | where: "lang", "en" | where: "type", "person" | sort: "title" %}
 {% assign organizations = site.abyss | where: "lang", "en" | where: "type", "organization" | sort: "title" %}

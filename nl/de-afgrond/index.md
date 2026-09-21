@@ -10,7 +10,7 @@ permalink: /nl/de-afgrond/
 
 # De Afgrond
 
-Een overzicht van mensen, organisaties en netwerken die desinformatie, complottheorieën, extreemrechts gedachtegoed en meer verspreiden—als onderzoek voor een toekomstige dramaserie die vóór 2050 voltooid moet zijn.
+Een overzicht van mensen, organisaties en netwerken die desinformatie, complottheorieën, extreemrechts gedachtegoed en meer verspreiden - als onderzoek voor een toekomstige fictieve dramaserie.
 
 {% assign people = site.abyss | where: "lang", "nl" | where: "type", "person" | sort: "title" %}
 {% assign organizations = site.abyss | where: "lang", "nl" | where: "type", "organization" | sort: "title" %}
