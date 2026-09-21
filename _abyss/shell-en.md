@@ -11,10 +11,6 @@ permalink: /the-abyss/shell/
 topics:
   - fossil-fuels
   - climate-denial
-
-connections:
-  - id: frits-bottcher
-    relationship: funded
 ---
 
 # Shell

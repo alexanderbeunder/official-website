@@ -10,13 +10,6 @@ permalink: /the-abyss/frits-bottcher/
 
 topics:
   - climate-denial
-
-connections:
-  - id: shell
-    relationship: received-funding-from
-
-  - id: sepp
-    relationship: connected-to
 ---
 
 # Frits Böttcher
