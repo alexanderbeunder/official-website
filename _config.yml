@@ -5,3 +5,6 @@ baseurl: ""
 collections:
   abyss:
     output: true
+
+plugins:
+  - jekyll-sitemap
