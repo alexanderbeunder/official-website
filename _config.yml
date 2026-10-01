@@ -2,6 +2,9 @@ title: Alexander Beunder
 url: "https://alexanderbeunder.com"
 baseurl: ""
 
+default_image: /images/alex.png
+default_image_alt: Alexander Beunder
+
 collections:
   abyss:
     output: true
