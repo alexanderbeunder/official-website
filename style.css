@@ -321,3 +321,7 @@ small {
     height: 850px;
     border: 0;
 }
+
+.grey {
+    color: #888888;
+}
