@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title></title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three/examples/js/controls/PointerLockControls.js"></script>
+    <style>
+        body { margin: 0; overflow: hidden; }
+        canvas { display: block; }
+        #instructions {
+            position: absolute;
+            top: 70%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 24px;
+            font-family: 'Courier New', Courier, monospace;
+            color: black;
+            background: rgba(0, 0, 0, 0.0);
+            padding: 20px;
+            border-radius: 0px;
+            text-align: center;
+            cursor: pointer;
+        }
+
+        .black-box {
+    background-color:  rgba(0, 0, 0, 0.7);
+    color: white;
+    padding: 5px 10px;
+    border-radius: 0px;
+    display: inline-block;
+}
+       
+
+     
+    </style>
+</head>
+<body>
+    <div id="instructions"> <span class="black-box">Click to enter</span><br /><br />Controls: WASD & mouse</div>
+
+       
+
+
+    <script>
+        let scene, camera, renderer, controls;
+        let moveForward = false, moveBackward = false, moveLeft = false, moveRight = false;
+        let velocity = new THREE.Vector3();
+        let direction = new THREE.Vector3();
+
+        init();
+        animate();
+
+        function init() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0xffffff);
+
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            renderer = new THREE.WebGLRenderer();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.body.appendChild(renderer.domElement);
+
+            if ('PointerLockControls' in THREE) {
+                controls = new THREE.PointerLockControls(camera, document.body);
+                document.getElementById('instructions').addEventListener('click', () => controls.lock());
+                controls.addEventListener('lock', () => document.getElementById('instructions').style.display = 'none');
+                controls.addEventListener('unlock', () => document.getElementById('instructions').style.display = 'block');
+                controls.getObject().position.set(50, 2.5, 70);
+                scene.add(controls.getObject());
+            }
+
+            const roomWidth = 50, roomHeight = 15, roomDepth = 30;
+            const roomMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.BackSide });
+
+            
+
+            
+            function createRoom(positionX) {
+                const roomGeometry = new THREE.BoxGeometry(50, 15, 30);
+
+    // Create materials for each side
+    const wallMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.BackSide, transparent: true, opacity: 0.5 });
+    const floorMaterial = new THREE.MeshBasicMaterial({ color: 0xf2f2f2, side: THREE.BackSide }); // Brown for floor
+    const ceilingMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.BackSide });
+
+    // Assign materials: [right, left, top, bottom, front, back]
+    const materials = [wallMaterial, wallMaterial, ceilingMaterial, floorMaterial, wallMaterial, wallMaterial];
+
+    const room = new THREE.Mesh(roomGeometry, materials);
+    room.position.x = positionX;
+    scene.add(room);
+
+
+                const imagePaths = [
+                'https://lh3.googleusercontent.com/d/1LE-ufMAkUAzaZonSZTO5Uv72Kr9hj7Rt',
+                'https://i.giphy.com/UkfUod3TFW66J2BWKK.webp',
+                'https://cdn.pixabay.com/photo/2023/10/27/10/28/woman-8344944_1280.jpg',
+                'https://cdn.pixabay.com/photo/2023/05/31/11/14/smoothie-8031132_1280.jpg',
+                'https://cdn.pixabay.com/photo/2024/01/10/15/41/chocolate-8499837_1280.jpg',
+                'https://cdn.pixabay.com/photo/2025/01/18/15/49/retro-9342597_1280.png',
+                'https://cdn.pixabay.com/photo/2024/08/17/20/49/bird-8976637_1280.jpg',
+                'https://cdn.pixabay.com/photo/2022/03/24/13/31/flowers-7089083_1280.jpg',
+                'https://cdn.pixabay.com/photo/2024/08/21/14/51/four-dimensional-8986442_1280.png',
+                'https://cdn.pixabay.com/photo/2025/01/16/00/03/frog-9335937_1280.jpg',
+ 'https://cdn.pixabay.com/photo/2024/01/26/23/39/ice-cream-8534875_1280.jpg',
+                'https://cdn.pixabay.com/photo/2022/10/20/04/23/bird-7534030_1280.jpg',
+                'https://cdn.pixabay.com/photo/2024/10/22/07/09/kids-9138810_1280.jpg',
+                'https://cdn.pixabay.com/photo/2024/12/30/17/00/landscape-9300672_1280.jpg',
+                'https://cdn.pixabay.com/photo/2021/01/06/21/50/couple-5895730_1280.jpg',
+                'https://cdn.pixabay.com/photo/2024/12/12/09/50/animal-9262352_1280.jpg',
+                'https://cdn.pixabay.com/photo/2024/04/27/01/12/couple-8722786_1280.jpg',
+                'https://cdn.pixabay.com/photo/2022/12/22/05/52/bird-7671530_1280.jpg',
+                'https://cdn.pixabay.com/photo/2025/01/26/20/33/robin-9361610_1280.jpg',
+                'https://cdn.pixabay.com/photo/2024/12/28/03/45/girl-9295191_1280.jpg',
+                'https://cdn.pixabay.com/photo/2024/04/27/01/12/couple-8722786_1280.jpg',
+                'https://cdn.pixabay.com/photo/2022/12/22/05/52/bird-7671530_1280.jpg',
+                'https://cdn.pixabay.com/photo/2025/01/26/20/33/robin-9361610_1280.jpg',
+                'https://cdn.pixabay.com/photo/2024/12/28/03/45/girl-9295191_1280.jpg',
+                'https://cdn.pixabay.com/photo/2024/04/27/01/12/couple-8722786_1280.jpg',
+                'https://cdn.pixabay.com/photo/2022/12/22/05/52/bird-7671530_1280.jpg',
+                'https://cdn.pixabay.com/photo/2025/01/26/20/33/robin-9361610_1280.jpg',
+                'https://cdn.pixabay.com/photo/2024/12/28/03/45/girl-9295191_1280.jpg',
+                'https://cdn.pixabay.com/photo/2025/01/26/20/33/robin-9361610_1280.jpg',
+                'https://cdn.pixabay.com/photo/2024/12/28/03/45/girl-9295191_1280.jpg',
+                'https://cdn.pixabay.com/photo/2024/04/27/01/12/couple-8722786_1280.jpg',
+                'https://cdn.pixabay.com/photo/2022/12/22/05/52/bird-7671530_1280.jpg',
+                'https://cdn.pixabay.com/photo/2025/01/26/20/33/robin-9361610_1280.jpg',
+                'https://cdn.pixabay.com/photo/2024/12/28/03/45/girl-9295191_1280.jpg',
+                'https://cdn.pixabay.com/photo/2024/12/28/03/45/girl-9295191_1280.jpg',
+                'https://cdn.pixabay.com/photo/2024/04/27/01/12/couple-8722786_1280.jpg',
+                'https://cdn.pixabay.com/photo/2022/12/22/05/52/bird-7671530_1280.jpg',
+                'https://cdn.pixabay.com/photo/2025/01/26/20/33/robin-9361610_1280.jpg',
+                'https://cdn.pixabay.com/photo/2024/12/28/03/45/girl-9295191_1280.jpg',
+                'https://cdn.pixabay.com/photo/2024/12/28/03/45/girl-9295191_1280.jpg',
+                'https://cdn.pixabay.com/photo/2024/04/27/01/12/couple-8722786_1280.jpg',
+                'https://cdn.pixabay.com/photo/2022/12/22/05/52/bird-7671530_1280.jpg',
+                'https://cdn.pixabay.com/photo/2025/01/26/20/33/robin-9361610_1280.jpg',
+                'https://cdn.pixabay.com/photo/2024/12/28/03/45/girl-9295191_1280.jpg'
+                ];
+
+                const frameGeometry = new THREE.PlaneGeometry(4, 4);  // Change size of images
+
+                const smallFrameGeometry = new THREE.PlaneGeometry(1, 1); // Half the size of the main images
+
+
+            let index = 0;
+
+            for (let i = 0; i < 5; i++) {
+                let offset = (i - 2) * 8;
+
+
+// BIG WALL 1
+
+                 // Load texture for main image
+                let texture = new THREE.TextureLoader().load(imagePaths[index++]);
+                let material = new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide });
+                let image = new THREE.Mesh(frameGeometry, material);
+                 // Position main image
+                image.position.set(positionX + offset, 3, -roomDepth / 2 + 0.51);
+                scene.add(image);
+                
+
+// Load texture for small image
+let smallTexture = new THREE.TextureLoader().load(imagePaths[index++]);
+    let smallMaterial = new THREE.MeshBasicMaterial({ map: smallTexture, side: THREE.DoubleSide });
+    let smallImage = new THREE.Mesh(smallFrameGeometry, smallMaterial);
+    
+    // Position the small image slightly to the right of the main image
+    smallImage.position.set(positionX + offset + 3, 3, -roomDepth / 2 + 0.51);
+    scene.add(smallImage);
+
+
+
+// BIG WALL 2
+                texture = new THREE.TextureLoader().load(imagePaths[index++]);
+                material = new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide });
+                image = new THREE.Mesh(frameGeometry, material);
+                image.position.set(positionX + offset, 3, roomDepth / 2 - 0.51);
+                scene.add(image);
+
+    // Small Image (Right Next to the Large One)
+    smallTexture = new THREE.TextureLoader().load(imagePaths[index++]);
+    smallMaterial = new THREE.MeshBasicMaterial({ map: smallTexture, side: THREE.DoubleSide });
+    smallImage = new THREE.Mesh(smallFrameGeometry, smallMaterial);
+    
+    // Adjust the position of the small image (right next to the large one)
+    smallImage.position.set(positionX + offset + 3, 3, roomDepth / 2 - 0.51); // Moves slightly to the right
+    scene.add(smallImage);
+
+
+            }
+
+            for (let i = 0; i < 5; i++) {
+    let offset = (i - 2) * 5;
+
+
+//LEFT WALL
+
+    // Main images, Left wall (correctly rotated)
+    let texture = new THREE.TextureLoader().load(imagePaths[index++]);
+    let material = new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide });
+    let image = new THREE.Mesh(frameGeometry, material);
+    image.rotation.y = Math.PI / 2;  // Rotate to align with the wall
+
+    // Position main image
+    image.position.set(positionX -roomWidth / 2 + 0.51, 3, offset);
+    scene.add(image);
+
+ // Small Image Next to the Large One
+ let smallTexture = new THREE.TextureLoader().load(imagePaths[index++]);
+    let smallMaterial = new THREE.MeshBasicMaterial({ map: smallTexture, side: THREE.DoubleSide });
+    let smallImage = new THREE.Mesh(smallFrameGeometry, smallMaterial);
+    smallImage.rotation.y = Math.PI / 2;  // Keep the same orientation as the large image
+
+    // Position it slightly to the right of the large image
+    smallImage.position.set(positionX - roomWidth / 2 + 0.51, 0.2, offset); // Moves it slightly outward
+    scene.add(smallImage);
+
+
+
+    //RIGHT WALL
+
+
+    // Main images, Right wall (fix: apply the same rotation)
+    texture = new THREE.TextureLoader().load(imagePaths[index++]);
+    material = new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide });
+    image = new THREE.Mesh(frameGeometry, material);
+    image.rotation.y = -Math.PI / 2; // Fix rotation direction
+    image.position.set(positionX + roomWidth / 2 - 0.51, 3, offset);
+    scene.add(image);
+
+    // Small Image Next to the Large One
+ smallTexture = new THREE.TextureLoader().load(imagePaths[index++]);
+    smallMaterial = new THREE.MeshBasicMaterial({ map: smallTexture, side: THREE.DoubleSide });
+    smallImage = new THREE.Mesh(smallFrameGeometry, smallMaterial);
+    smallImage.rotation.y = -Math.PI / 2;  // Keep the same orientation as the large image
+
+    // Position it slightly to the right of the large image
+    smallImage.position.set(positionX + roomWidth / 2 - 0.51, 0.2, offset); // Moves it slightly outward
+    scene.add(smallImage);
+
+    
+
+
+    
+                }
+            }
+
+
+            function createRoom2(positionX) {
+                const roomGeometry = new THREE.BoxGeometry(50, 15, 30);
+
+                const wallMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.BackSide, transparent: true, opacity: 0.5 });
+    const floorMaterial = new THREE.MeshBasicMaterial({ color: 0xf2f2f2, side: THREE.BackSide }); // Brown for floor
+    const ceilingMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.BackSide });
+
+const materials = [wallMaterial, wallMaterial, ceilingMaterial, floorMaterial, wallMaterial, wallMaterial];
+
+const room = new THREE.Mesh(roomGeometry, materials);
+room.position.x = positionX;
+scene.add(room);
+
+
+// IMAGES
+
+const imagePaths = [
+                'https://lh3.googleusercontent.com/d/1LE-ufMAkUAzaZonSZTO5Uv72Kr9hj7Rt',
+                'https://i.giphy.com/UkfUod3TFW66J2BWKK.webp',
+                'https://cdn.pixabay.com/photo/2023/10/27/10/28/woman-8344944_1280.jpg',
+                'https://cdn.pixabay.com/photo/2023/05/31/11/14/smoothie-8031132_1280.jpg',
+                'https://cdn.pixabay.com/photo/2024/01/10/15/41/chocolate-8499837_1280.jpg',
+                'https://cdn.pixabay.com/photo/2025/01/18/15/49/retro-9342597_1280.png',
+                'https://cdn.pixabay.com/photo/2024/08/17/20/49/bird-8976637_1280.jpg',
+                'https://cdn.pixabay.com/photo/2022/03/24/13/31/flowers-7089083_1280.jpg',
+                'https://cdn.pixabay.com/photo/2024/08/21/14/51/four-dimensional-8986442_1280.png',
+                'https://cdn.pixabay.com/photo/2025/01/16/00/03/frog-9335937_1280.jpg',
+ 'https://cdn.pixabay.com/photo/2024/01/26/23/39/ice-cream-8534875_1280.jpg',
+                'https://cdn.pixabay.com/photo/2022/10/20/04/23/bird-7534030_1280.jpg',
+                'https://cdn.pixabay.com/photo/2024/10/22/07/09/kids-9138810_1280.jpg',
+                'https://cdn.pixabay.com/photo/2024/12/30/17/00/landscape-9300672_1280.jpg',
+                'https://cdn.pixabay.com/photo/2021/01/06/21/50/couple-5895730_1280.jpg',
+                'https://cdn.pixabay.com/photo/2024/12/12/09/50/animal-9262352_1280.jpg',
+                'https://cdn.pixabay.com/photo/2024/04/27/01/12/couple-8722786_1280.jpg',
+                'https://cdn.pixabay.com/photo/2022/12/22/05/52/bird-7671530_1280.jpg',
+                'https://cdn.pixabay.com/photo/2025/01/26/20/33/robin-9361610_1280.jpg',
+                'https://cdn.pixabay.com/photo/2024/12/28/03/45/girl-9295191_1280.jpg',
+                'https://cdn.pixabay.com/photo/2024/04/27/01/12/couple-8722786_1280.jpg',
+                'https://cdn.pixabay.com/photo/2022/12/22/05/52/bird-7671530_1280.jpg',
+                'https://cdn.pixabay.com/photo/2025/01/26/20/33/robin-9361610_1280.jpg',
+                'https://cdn.pixabay.com/photo/2024/12/28/03/45/girl-9295191_1280.jpg',
+                'https://cdn.pixabay.com/photo/2024/04/27/01/12/couple-8722786_1280.jpg',
+                'https://cdn.pixabay.com/photo/2022/12/22/05/52/bird-7671530_1280.jpg',
+                'https://cdn.pixabay.com/photo/2025/01/26/20/33/robin-9361610_1280.jpg',
+                'https://cdn.pixabay.com/photo/2024/12/28/03/45/girl-9295191_1280.jpg',
+                'https://cdn.pixabay.com/photo/2025/01/26/20/33/robin-9361610_1280.jpg',
+                'https://cdn.pixabay.com/photo/2024/12/28/03/45/girl-9295191_1280.jpg',
+                'https://cdn.pixabay.com/photo/2024/04/27/01/12/couple-8722786_1280.jpg',
+                'https://cdn.pixabay.com/photo/2022/12/22/05/52/bird-7671530_1280.jpg',
+                'https://cdn.pixabay.com/photo/2025/01/26/20/33/robin-9361610_1280.jpg',
+                'https://cdn.pixabay.com/photo/2024/12/28/03/45/girl-9295191_1280.jpg',
+                'https://cdn.pixabay.com/photo/2024/12/28/03/45/girl-9295191_1280.jpg',
+                'https://cdn.pixabay.com/photo/2024/04/27/01/12/couple-8722786_1280.jpg',
+                'https://cdn.pixabay.com/photo/2022/12/22/05/52/bird-7671530_1280.jpg',
+                'https://cdn.pixabay.com/photo/2025/01/26/20/33/robin-9361610_1280.jpg',
+                'https://cdn.pixabay.com/photo/2024/12/28/03/45/girl-9295191_1280.jpg',
+                'https://cdn.pixabay.com/photo/2024/12/28/03/45/girl-9295191_1280.jpg',
+                'https://cdn.pixabay.com/photo/2024/04/27/01/12/couple-8722786_1280.jpg',
+                'https://cdn.pixabay.com/photo/2022/12/22/05/52/bird-7671530_1280.jpg',
+                'https://cdn.pixabay.com/photo/2025/01/26/20/33/robin-9361610_1280.jpg',
+                'https://cdn.pixabay.com/photo/2024/12/28/03/45/girl-9295191_1280.jpg'
+                ];
+
+                const frameGeometry = new THREE.PlaneGeometry(4, 4);  // Change size of images
+
+                const smallFrameGeometry = new THREE.PlaneGeometry(1, 1); // Half the size of the main images
+
+
+
+
+    let index = 0;
+
+    for (let i = 0; i < 5; i++) {  // Example loop for 5 images
+    if (i === 2) continue; // Skip the 3rd image (index 2)
+
+    let offset = (i - 2) * 8;
+
+
+
+// BIG WALL 1
+
+     // Load texture for main image
+    let texture = new THREE.TextureLoader().load(imagePaths[index++]);
+    let material = new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide });
+    let image = new THREE.Mesh(frameGeometry, material);
+     // Position main image
+    image.position.set(positionX + offset, 3, -roomDepth / 2 + 0.51);
+    scene.add(image);
+
+
+    }
+
+    for (let i = 0; i < 5; i++) {  // Example loop for 5 images
+
+    let offset = (i - 2) * 8;
+    
+
+// Load texture for small image
+let smallTexture = new THREE.TextureLoader().load(imagePaths[index++]);
+let smallMaterial = new THREE.MeshBasicMaterial({ map: smallTexture, side: THREE.DoubleSide });
+let smallImage = new THREE.Mesh(smallFrameGeometry, smallMaterial);
+
+// Position the small image slightly to the right of the main image
+smallImage.position.set(positionX + offset + 3, 3, -roomDepth / 2 + 0.51);
+scene.add(smallImage);
+
+    }
+
+    for (let i = 0; i < 5; i++) {  // Example loop for 5 images
+
+    let offset = (i - 2) * 8;
+
+
+// BIG WALL 2
+    texture = new THREE.TextureLoader().load(imagePaths[index++]);
+    material = new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide });
+    image = new THREE.Mesh(frameGeometry, material);
+    image.position.set(positionX + offset, 3, roomDepth / 2 - 0.51);
+    scene.add(image);
+
+// Small Image (Right Next to the Large One)
+smallTexture = new THREE.TextureLoader().load(imagePaths[index++]);
+smallMaterial = new THREE.MeshBasicMaterial({ map: smallTexture, side: THREE.DoubleSide });
+smallImage = new THREE.Mesh(smallFrameGeometry, smallMaterial);
+
+// Adjust the position of the small image (right next to the large one)
+smallImage.position.set(positionX + offset + 3, 3, roomDepth / 2 - 0.51); // Moves slightly to the right
+scene.add(smallImage);
+
+
+}
+
+for (let i = 0; i < 5; i++) {
+let offset = (i - 2) * 5;
+
+
+//LEFT WALL
+
+// Main images, Left wall (correctly rotated)
+let texture = new THREE.TextureLoader().load(imagePaths[index++]);
+let material = new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide });
+let image = new THREE.Mesh(frameGeometry, material);
+image.rotation.y = Math.PI / 2;  // Rotate to align with the wall
+
+// Position main image
+image.position.set(positionX -roomWidth / 2 + 0.51, 3, offset);
+scene.add(image);
+
+// Small Image Next to the Large One
+let smallTexture = new THREE.TextureLoader().load(imagePaths[index++]);
+let smallMaterial = new THREE.MeshBasicMaterial({ map: smallTexture, side: THREE.DoubleSide });
+let smallImage = new THREE.Mesh(smallFrameGeometry, smallMaterial);
+smallImage.rotation.y = Math.PI / 2;  // Keep the same orientation as the large image
+
+// Position it slightly to the right of the large image
+smallImage.position.set(positionX - roomWidth / 2 + 0.51, 0.2, offset); // Moves it slightly outward
+scene.add(smallImage);
+
+}
+
+
+for (let i = 0; i < 5; i++) {
+    if (i === 2) continue; // Skip the 3rd image (index 2)
+    let offset = (i - 2) * 5;
+
+
+
+//RIGHT WALL
+
+
+// Main images, Right wall (fix: apply the same rotation)
+texture = new THREE.TextureLoader().load(imagePaths[index++]);
+material = new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide });
+image = new THREE.Mesh(frameGeometry, material);
+image.rotation.y = -Math.PI / 2; // Fix rotation direction
+image.position.set(positionX + roomWidth / 2 - 0.51, 3, offset);
+scene.add(image);
+
+}
+
+for (let i = 0; i < 5; i++) {
+    let offset = (i - 2) * 5;
+
+
+
+// Small Image Next to the Large One
+smallTexture = new THREE.TextureLoader().load(imagePaths[index++]);
+smallMaterial = new THREE.MeshBasicMaterial({ map: smallTexture, side: THREE.DoubleSide });
+smallImage = new THREE.Mesh(smallFrameGeometry, smallMaterial);
+smallImage.rotation.y = -Math.PI / 2;  // Keep the same orientation as the large image
+
+// Position it slightly to the right of the large image
+smallImage.position.set(positionX + roomWidth / 2 - 0.51, 0.2, offset); // Moves it slightly outward
+scene.add(smallImage);
+
+
+
+
+
+    }
+
+
+
+
+// VIDEO
+
+
+// VIDEO 1
+    const video = document.createElement('video');
+    video.src = 'https://cdn.pixabay.com/video/2017/06/16/10001-222013868_large.mp4';
+    video.loop = true;
+    video.muted = true; // Start muted
+    video.autoplay = true;
+    video.playsInline = true;
+    video.crossOrigin = "anonymous";
+    video.play();
+
+
+    const videoTexture = new THREE.VideoTexture(video);
+    videoTexture.minFilter = THREE.LinearFilter;
+    videoTexture.magFilter = THREE.LinearFilter;
+    videoTexture.format = THREE.RGBAFormat;
+
+    const videoframeGeometry = new THREE.PlaneGeometry(4, 3);
+    const videoMaterial = new THREE.MeshBasicMaterial({ map: videoTexture, side: THREE.DoubleSide });
+
+    const videoScreen = new THREE.Mesh(videoframeGeometry, videoMaterial);
+    videoScreen.position.set(positionX, 3, -roomDepth / 2 + 0.51);
+    scene.add(videoScreen);
+
+
+
+// VIDEO 2
+
+const video2 = document.createElement('video');
+    video2.src = 'https://vz-0fee9579-299.b-cdn.net/2d39b1c8-b295-4322-9891-b132a8938918/play_720p.mp4';
+    video2.loop = true;
+    video2.muted = true; // Start muted
+    video2.autoplay = true;
+    video2.playsInline = true;
+    video2.crossOrigin = "anonymous";
+    video2.play();
+
+
+    const video2Texture = new THREE.VideoTexture(video2);
+    video2Texture.minFilter = THREE.LinearFilter;
+    video2Texture.magFilter = THREE.LinearFilter;
+    video2Texture.format = THREE.RGBAFormat;
+
+    const video2frameGeometry = new THREE.PlaneGeometry(4, 3);
+    const video2Material = new THREE.MeshBasicMaterial({ map: video2Texture, side: THREE.DoubleSide });
+
+
+    // Create the second video screen (for another wall)
+const videoScreen2 = new THREE.Mesh(video2frameGeometry, video2Material);
+// Position it on another wall (Example: Right wall)
+videoScreen2.position.set(positionX + roomWidth / 2 - 0.51, 3, 0); // Adjust as needed
+videoScreen2.rotation.y = -Math.PI / 2; // Rotate for correct orientation
+scene.add(videoScreen2); // Add to scene
+
+    
+
+    // Text instructions
+    const instructions = document.createElement("div");
+    instructions.innerHTML = "▣ Press 'P' to restart the video with sound</br>▣ Press 'O' to mute it.";
+    instructions.style.position = "absolute";
+    instructions.style.top = "85%";
+    instructions.style.left = "50%";
+    instructions.style.transform = "translateX(-50%)";
+    instructions.style.fontSize = "22px";
+    instructions.style.fontFamily = "'Courier New', Courier, monospace";
+    instructions.style.color = "black";
+    instructions.style.background = "rgba(0, 0, 0, 0.0)";
+    instructions.style.padding = "10px";
+    instructions.style.display = "none";
+    document.body.appendChild(instructions);
+
+
+    const instructions2 = document.createElement("div");
+    instructions2.innerHTML = "▣ Press 'P' to restart the video with sound</br>▣ Press 'O' to mute it.";
+    instructions2.style.position = "absolute";
+    instructions2.style.top = "85%";
+    instructions2.style.left = "50%";
+    instructions2.style.transform = "translateX(-50%)";
+    instructions2.style.fontSize = "22px";
+    instructions2.style.fontFamily = "'Courier New', Courier, monospace";
+    instructions2.style.color = "black";
+    instructions2.style.background = "rgba(0, 0, 0, 0.0)";
+    instructions2.style.padding = "10px";
+    instructions2.style.display = "none";
+    document.body.appendChild(instructions2);
+
+
+    // Function to update audio for both video screens
+function updateAudio() {
+    const distance1 = controls.getObject().position.distanceTo(videoScreen.position);
+    const distance2 = controls.getObject().position.distanceTo(videoScreen2.position);
+    const maxDistance = 10; // Maximum distance where audio is still audible
+    const minDistance = 2; // Distance where volume is at max
+
+    let volume = 0;
+    let volume2 = 0;
+    let instructionsVisible = false;
+    let instructions2Visible = false;
+
+    // Calculate volume and visibility for the first video
+    if (distance1 < maxDistance) {
+        instructionsVisible = true;
+        volume += 1 - (distance1 - minDistance) / (maxDistance - minDistance);
+    }
+
+    // Calculate volume and visibility for the second video
+    if (distance2 < maxDistance) {
+        instructions2Visible = true;
+        volume2 += 1 - (distance2 - minDistance) / (maxDistance - minDistance);
+    }
+
+    // Display instructions if the viewer is near either video
+    if (instructionsVisible) {
+        instructions.style.display = "block";
+    } else {
+        instructions.style.display = "none";
+    }
+
+    if (instructions2Visible) {
+        instructions2.style.display = "block";
+    } else {
+        instructions2.style.display = "none";
+    }
+
+    // Update the video volume for both screens
+    video2.volume = Math.max(0, Math.min(1, volume2)); // Keep volume between 0 and 1
+    video.volume = Math.max(0, Math.min(1, volume)); // Keep volume between 0 and 1
+}
+
+// Event listener for controlling video playback (mute/unmute, restart)
+document.addEventListener("keydown", (event) => {
+    if (instructions.style.display === "block") {
+        if (event.code === "KeyP") {
+            video.currentTime = 0; // Restart video
+            video.muted = false;
+            video.play();
+        } else if (event.code === "KeyO") {
+            video.muted = true;
+        }
+    }
+});
+
+document.addEventListener("keydown", (event) => {
+    if (instructions2.style.display === "block") {
+        if (event.code === "KeyP") {
+            video2.currentTime = 0; // Restart video
+            video2.muted = false;
+            video2.play();
+        } else if (event.code === "KeyO") {
+            video2.muted = true;
+        }
+    }
+});
+
+// Animation loop to continuously update the audio based on distance
+function animateAudio() {
+    updateAudio();
+    requestAnimationFrame(animateAudio);
+}
+animateAudio();
+}
+
+
+
+
+
+            createRoom(0);  // First room
+            createRoom2(100); // Second room, offset by 100 units
+
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
+
+            document.addEventListener('keydown', (event) => {
+                switch (event.code) {
+                    case 'KeyW': moveForward = true; break;
+                    case 'KeyS': moveBackward = true; break;
+                    case 'KeyA': moveLeft = true; break;
+                    case 'KeyD': moveRight = true; break;
+                }
+            });
+
+            document.addEventListener('keyup', (event) => {
+                switch (event.code) {
+                    case 'KeyW': moveForward = false; break;
+                    case 'KeyS': moveBackward = false; break;
+                    case 'KeyA': moveLeft = false; break;
+                    case 'KeyD': moveRight = false; break;
+                }
+            });
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            if (controls && controls.isLocked) {
+                const speed = 0.2;
+                direction.z = Number(moveForward) - Number(moveBackward);
+                direction.x = Number(moveRight) - Number(moveLeft);
+                direction.normalize();
+                velocity.z = direction.z * speed;
+                velocity.x = direction.x * speed;
+                controls.moveRight(velocity.x);
+                controls.moveForward(velocity.z);
+            }
+            renderer.render(scene, camera);
+        }
+    </script>
+</body>
+</html>
