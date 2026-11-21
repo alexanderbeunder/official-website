@@ -61,6 +61,21 @@
             user-select: none; -webkit-user-select: none;
         }
 
+        #fullscreenBtn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 10px 15px;
+            font-size: 16px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            z-index: 1200;
+        }
+        #fullscreenBtn:hover { background: rgba(0, 0, 0, 0.9); }
+
         html, body { width: 100%; height: 100%; }
         body { overscroll-behavior: none; }
         canvas { touch-action: none; }
@@ -76,6 +91,7 @@
     </style>
 </head>
 <body>
+    <button id="fullscreenBtn" type="button">🔲 Fullscreen</button>
     <div id="instructions"> <span class="black-box">Click to enter</span><br /><br />Controls: WASD & mouse</div>
     <div id="joystick-container"></div>
     <div class="mobile-controls">
@@ -103,6 +119,21 @@
         init();
         animate();
 
+        // Fullscreen toggle (same behaviour as the other 3D room).
+        const fullscreenButton = document.getElementById('fullscreenBtn');
+        fullscreenButton.addEventListener('click', () => {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(error => {
+                    console.warn('Fullscreen could not be enabled:', error);
+                });
+            } else {
+                document.exitFullscreen();
+            }
+        });
+        document.addEventListener('fullscreenchange', () => {
+            fullscreenButton.textContent = document.fullscreenElement ? 'X' : '🔲 Fullscreen';
+        });
+
         function init() {
             scene = new THREE.Scene();
             scene.background = new THREE.Color(0xffffff);
@@ -126,7 +157,7 @@
                 camera.position.set(50, 2.5, 70);
                 camera.rotation.order = 'YXZ';
                 const intro = document.getElementById('instructions');
-                intro.innerHTML = '<span class="black-box">Tap to enter</span><br /><br />Use the joystick to move.<br />Use the arrow buttons to look and move vertically.';
+                intro.innerHTML = '<span class="black-box">Tap to enter</span><br /><br />Use the joystick to move around:<br />Forward / backward / left / right<br /><br />◀ and ▶ = turn left and right<br />▲ and ▼ = move up and down';
                 intro.addEventListener('click', () => { intro.style.display = 'none'; });
                 intro.addEventListener('touchend', () => { intro.style.display = 'none'; }, { once: true, passive: true });
 
