@@ -186,7 +186,7 @@
                 camera.position.set(50, 2.5, 70);
                 camera.rotation.order = 'YXZ';
                 const intro = document.getElementById('instructions');
-                intro.innerHTML = '<span class="black-box">Tap to enter</span><br /><br />Use the joystick to move around:<br />Forward / backward / left / right<br /><br />◀ and ▶ = turn left and right<br />▲ and ▼ = move up and down';
+                intro.innerHTML = '<span class="black-box">Tap to enter</span><br /><br />Use the invisible joystick (bottom left)<br /> to move around:<br />Forward / backward / left / right<br /><br />◀ and ▶ = turn left and right<br />▲ and ▼ = move up and down';
                 intro.addEventListener('click', () => { intro.style.display = 'none'; });
                 intro.addEventListener('touchend', () => { intro.style.display = 'none'; }, { once: true, passive: true });
 
