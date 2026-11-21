@@ -161,6 +161,8 @@
 
     <script>
         let scene, camera, renderer, controls;
+        let welcomeGifImage = null;
+        let welcomeGifTexture = null;
         let moveForward = false, moveBackward = false, moveLeft = false, moveRight = false;
         let velocity = new THREE.Vector3();
         let direction = new THREE.Vector3();
@@ -256,9 +258,9 @@
             // Reuse textures when the same image URL appears more than once.
             // This avoids duplicate downloads and duplicate GPU texture uploads.
             // Animated welcome GIF used for the first large artwork in the second hall.
-            const welcomeGifImage = new Image();
+            welcomeGifImage = new Image();
             welcomeGifImage.src = './welcome.gif';
-            const welcomeGifTexture = new THREE.Texture(welcomeGifImage);
+            welcomeGifTexture = new THREE.Texture(welcomeGifImage);
             welcomeGifTexture.colorSpace = THREE.SRGBColorSpace;
             welcomeGifImage.onload = () => { welcomeGifTexture.needsUpdate = true; };
 
