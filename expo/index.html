@@ -76,21 +76,25 @@
         }
         #fullscreenBtn:hover { background: rgba(0, 0, 0, 0.9); }
 
+        /* Video buttons are mobile-only and are shown by proximity logic. */
         #videoControls {
             position: fixed;
             top: 70px;
             right: 20px;
             z-index: 1200;
-            display: flex;
+            display: none;
             flex-direction: column;
             gap: 8px;
         }
         #videoControls button {
-            padding: 10px 12px;
-            font-size: 14px;
+            width: 42px;
+            height: 42px;
+            padding: 0;
+            font-size: 20px;
+            font-weight: bold;
             color: white;
             background: rgba(0, 0, 0, 0.75);
-            border: 1px solid rgba(255, 255, 255, 0.35);
+            border: 1px solid rgba(255, 255, 255, 0.5);
             border-radius: 5px;
             cursor: pointer;
             touch-action: manipulation;
@@ -124,8 +128,8 @@
 <body>
     <button id="fullscreenBtn" type="button">🔲 Fullscreen</button>
     <div id="videoControls">
-        <button id="restartVideosBtn" type="button">↻ Restart with sound</button>
-        <button id="muteVideosBtn" type="button">🔇 Mute</button>
+        <button id="restartVideosBtn" type="button" aria-label="Restart video with sound" title="Restart video with sound">R</button>
+        <button id="muteVideosBtn" type="button" aria-label="Mute video" title="Mute video">M</button>
         <div id="videoControlStatus" role="status" aria-live="polite"></div>
     </div>
     <div id="instructions"> <span class="black-box">Click to enter</span><br /><br />Controls: WASD & mouse</div>
@@ -663,7 +667,9 @@ const video2 = document.createElement('video');
 
     function updateMuteButton() {
         const bothMuted = video.muted && video2.muted;
-        muteVideosButton.textContent = bothMuted ? '🔊 Unmute' : '🔇 Mute';
+        muteVideosButton.textContent = 'M';
+        muteVideosButton.setAttribute('aria-label', bothMuted ? 'Unmute video' : 'Mute video');
+        muteVideosButton.title = bothMuted ? 'Unmute video' : 'Mute video';
     }
 
     restartVideosButton.addEventListener('click', async () => {
@@ -712,7 +718,7 @@ scene.add(videoScreen2); // Add to scene
 
     // Text instructions
     const instructions = document.createElement("div");
-    instructions.innerHTML = "▣ Press 'P' to restart the video with sound</br>▣ Press 'O' to mute it.";
+    instructions.innerHTML = "▣ Press 'R' to restart the video with sound</br>▣ Press 'M' to mute it.";
     instructions.style.position = "absolute";
     instructions.style.top = "85%";
     instructions.style.left = "50%";
@@ -727,7 +733,7 @@ scene.add(videoScreen2); // Add to scene
 
 
     const instructions2 = document.createElement("div");
-    instructions2.innerHTML = "▣ Press 'P' to restart the video with sound</br>▣ Press 'O' to mute it.";
+    instructions2.innerHTML = "▣ Press 'R' to restart the video with sound</br>▣ Press 'M' to mute it.";
     instructions2.style.position = "absolute";
     instructions2.style.top = "85%";
     instructions2.style.left = "50%";
@@ -779,6 +785,12 @@ function updateAudio() {
         instructions2.style.display = "none";
     }
 
+    // Show the R/M touch buttons only on mobile, and only within the
+    // same 10-unit proximity range used by the nearby-video instructions.
+    const isMobileDevice = window.matchMedia('(max-width: 1024px), (pointer: coarse)').matches;
+    const videoControls = document.getElementById('videoControls');
+    videoControls.style.display = (isMobileDevice && (instructionsVisible || instructions2Visible)) ? 'flex' : 'none';
+
     // Update the video volume for both screens
     video2.volume = Math.max(0, Math.min(1, volume2)); // Keep volume between 0 and 1
     video.volume = Math.max(0, Math.min(1, volume)); // Keep volume between 0 and 1
@@ -787,13 +799,13 @@ function updateAudio() {
 // Event listener for controlling video playback (mute/unmute, restart)
 document.addEventListener("keydown", (event) => {
     if (instructions.style.display === "block") {
-        if (event.code === "KeyP") {
+        if (event.code === "KeyR") {
             video.currentTime = 0; // Restart video
             video.muted = false;
             video.play();
             updateMuteButton();
-        } else if (event.code === "KeyO") {
-            video.muted = true;
+        } else if (event.code === "KeyM") {
+            video.muted = !video.muted;
             updateMuteButton();
         }
     }
@@ -801,13 +813,13 @@ document.addEventListener("keydown", (event) => {
 
 document.addEventListener("keydown", (event) => {
     if (instructions2.style.display === "block") {
-        if (event.code === "KeyP") {
+        if (event.code === "KeyR") {
             video2.currentTime = 0; // Restart video
             video2.muted = false;
             video2.play();
             updateMuteButton();
-        } else if (event.code === "KeyO") {
-            video2.muted = true;
+        } else if (event.code === "KeyM") {
+            video2.muted = !video2.muted;
             updateMuteButton();
         }
     }
