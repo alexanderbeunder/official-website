@@ -76,6 +76,37 @@
         }
         #fullscreenBtn:hover { background: rgba(0, 0, 0, 0.9); }
 
+        #videoControls {
+            position: fixed;
+            top: 70px;
+            right: 20px;
+            z-index: 1200;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        #videoControls button {
+            padding: 10px 12px;
+            font-size: 14px;
+            color: white;
+            background: rgba(0, 0, 0, 0.75);
+            border: 1px solid rgba(255, 255, 255, 0.35);
+            border-radius: 5px;
+            cursor: pointer;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+        #videoControls button:active { background: rgba(70, 70, 70, 0.95); }
+        #videoControlStatus {
+            color: white;
+            background: rgba(0, 0, 0, 0.75);
+            border-radius: 4px;
+            padding: 6px 8px;
+            font: 12px Arial, sans-serif;
+            text-align: right;
+            display: none;
+        }
+
         html, body { width: 100%; height: 100%; }
         body { overscroll-behavior: none; }
         canvas { touch-action: none; }
@@ -92,6 +123,11 @@
 </head>
 <body>
     <button id="fullscreenBtn" type="button">🔲 Fullscreen</button>
+    <div id="videoControls">
+        <button id="restartVideosBtn" type="button">↻ Restart with sound</button>
+        <button id="muteVideosBtn" type="button">🔇 Mute</button>
+        <div id="videoControlStatus" role="status" aria-live="polite"></div>
+    </div>
     <div id="instructions"> <span class="black-box">Click to enter</span><br /><br />Controls: WASD & mouse</div>
     <div id="joystick-container"></div>
     <div class="mobile-controls">
@@ -620,6 +656,41 @@ const video2 = document.createElement('video');
     video2.crossOrigin = "anonymous";
     video2.play();
 
+    // Touch-friendly playback controls for both screens.
+    const restartVideosButton = document.getElementById('restartVideosBtn');
+    const muteVideosButton = document.getElementById('muteVideosBtn');
+    const videoControlStatus = document.getElementById('videoControlStatus');
+
+    function updateMuteButton() {
+        const bothMuted = video.muted && video2.muted;
+        muteVideosButton.textContent = bothMuted ? '🔊 Unmute' : '🔇 Mute';
+    }
+
+    restartVideosButton.addEventListener('click', async () => {
+        video.currentTime = 0;
+        video2.currentTime = 0;
+        video.muted = false;
+        video2.muted = false;
+        updateMuteButton();
+        try {
+            await Promise.all([video.play(), video2.play()]);
+            videoControlStatus.textContent = 'Videos restarted';
+            videoControlStatus.style.display = 'block';
+        } catch (error) {
+            videoControlStatus.textContent = 'Tap again to allow sound playback';
+            videoControlStatus.style.display = 'block';
+        }
+    });
+
+    muteVideosButton.addEventListener('click', () => {
+        const shouldMute = !(video.muted && video2.muted);
+        video.muted = shouldMute;
+        video2.muted = shouldMute;
+        updateMuteButton();
+        videoControlStatus.textContent = shouldMute ? 'Sound muted' : 'Sound on';
+        videoControlStatus.style.display = 'block';
+    });
+    updateMuteButton();
 
     const video2Texture = new THREE.VideoTexture(video2);
     video2Texture.minFilter = THREE.LinearFilter;
@@ -720,8 +791,10 @@ document.addEventListener("keydown", (event) => {
             video.currentTime = 0; // Restart video
             video.muted = false;
             video.play();
+            updateMuteButton();
         } else if (event.code === "KeyO") {
             video.muted = true;
+            updateMuteButton();
         }
     }
 });
@@ -732,8 +805,10 @@ document.addEventListener("keydown", (event) => {
             video2.currentTime = 0; // Restart video
             video2.muted = false;
             video2.play();
+            updateMuteButton();
         } else if (event.code === "KeyO") {
             video2.muted = true;
+            updateMuteButton();
         }
     }
 });
