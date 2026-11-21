@@ -196,7 +196,6 @@
             camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
             renderer = new THREE.WebGLRenderer();
             renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setSize(window.innerWidth, window.innerHeight);
             document.body.appendChild(renderer.domElement);
 
             if (!isMobile && 'PointerLockControls' in THREE) {
@@ -252,6 +251,17 @@
                 bindHold('rotateRight', value => rotateRight = value);
                 bindHold('moveUp', value => moveUp = value);
                 bindHold('moveDown', value => moveDown = value);
+            }
+
+            // Reuse textures when the same image URL appears more than once.
+            // This avoids duplicate downloads and duplicate GPU texture uploads.
+            const textureLoader = new THREE.TextureLoader();
+            const textureCache = new Map();
+            function loadSharedTexture(url) {
+                if (!textureCache.has(url)) {
+                    textureCache.set(url, textureLoader.load(url));
+                }
+                return textureCache.get(url);
             }
 
             const roomWidth = 50, roomHeight = 15, roomDepth = 30;
@@ -337,7 +347,7 @@
 // BIG WALL 1
 
                  // Load texture for main image
-                let texture = new THREE.TextureLoader().load(imagePaths[index++]);
+                let texture = loadSharedTexture(imagePaths[index++]);
                 let material = new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide });
                 let image = new THREE.Mesh(frameGeometry, material);
                  // Position main image
@@ -346,7 +356,7 @@
                 
 
 // Load texture for small image
-let smallTexture = new THREE.TextureLoader().load(imagePaths[index++]);
+let smallTexture = loadSharedTexture(imagePaths[index++]);
     let smallMaterial = new THREE.MeshBasicMaterial({ map: smallTexture, side: THREE.DoubleSide });
     let smallImage = new THREE.Mesh(smallFrameGeometry, smallMaterial);
     
@@ -357,14 +367,14 @@ let smallTexture = new THREE.TextureLoader().load(imagePaths[index++]);
 
 
 // BIG WALL 2
-                texture = new THREE.TextureLoader().load(imagePaths[index++]);
+                texture = loadSharedTexture(imagePaths[index++]);
                 material = new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide });
                 image = new THREE.Mesh(frameGeometry, material);
                 image.position.set(positionX + offset, 3, roomDepth / 2 - 0.51);
                 scene.add(image);
 
     // Small Image (Right Next to the Large One)
-    smallTexture = new THREE.TextureLoader().load(imagePaths[index++]);
+    smallTexture = loadSharedTexture(imagePaths[index++]);
     smallMaterial = new THREE.MeshBasicMaterial({ map: smallTexture, side: THREE.DoubleSide });
     smallImage = new THREE.Mesh(smallFrameGeometry, smallMaterial);
     
@@ -382,7 +392,7 @@ let smallTexture = new THREE.TextureLoader().load(imagePaths[index++]);
 //LEFT WALL
 
     // Main images, Left wall (correctly rotated)
-    let texture = new THREE.TextureLoader().load(imagePaths[index++]);
+    let texture = loadSharedTexture(imagePaths[index++]);
     let material = new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide });
     let image = new THREE.Mesh(frameGeometry, material);
     image.rotation.y = Math.PI / 2;  // Rotate to align with the wall
@@ -392,7 +402,7 @@ let smallTexture = new THREE.TextureLoader().load(imagePaths[index++]);
     scene.add(image);
 
  // Small Image Next to the Large One
- let smallTexture = new THREE.TextureLoader().load(imagePaths[index++]);
+ let smallTexture = loadSharedTexture(imagePaths[index++]);
     let smallMaterial = new THREE.MeshBasicMaterial({ map: smallTexture, side: THREE.DoubleSide });
     let smallImage = new THREE.Mesh(smallFrameGeometry, smallMaterial);
     smallImage.rotation.y = Math.PI / 2;  // Keep the same orientation as the large image
@@ -407,7 +417,7 @@ let smallTexture = new THREE.TextureLoader().load(imagePaths[index++]);
 
 
     // Main images, Right wall (fix: apply the same rotation)
-    texture = new THREE.TextureLoader().load(imagePaths[index++]);
+    texture = loadSharedTexture(imagePaths[index++]);
     material = new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide });
     image = new THREE.Mesh(frameGeometry, material);
     image.rotation.y = -Math.PI / 2; // Fix rotation direction
@@ -415,7 +425,7 @@ let smallTexture = new THREE.TextureLoader().load(imagePaths[index++]);
     scene.add(image);
 
     // Small Image Next to the Large One
- smallTexture = new THREE.TextureLoader().load(imagePaths[index++]);
+ smallTexture = loadSharedTexture(imagePaths[index++]);
     smallMaterial = new THREE.MeshBasicMaterial({ map: smallTexture, side: THREE.DoubleSide });
     smallImage = new THREE.Mesh(smallFrameGeometry, smallMaterial);
     smallImage.rotation.y = -Math.PI / 2;  // Keep the same orientation as the large image
@@ -514,7 +524,7 @@ const imagePaths = [
 // BIG WALL 1
 
      // Load texture for main image
-    let texture = new THREE.TextureLoader().load(imagePaths[index++]);
+    let texture = loadSharedTexture(imagePaths[index++]);
     let material = new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide });
     let image = new THREE.Mesh(frameGeometry, material);
      // Position main image
@@ -530,7 +540,7 @@ const imagePaths = [
     
 
 // Load texture for small image
-let smallTexture = new THREE.TextureLoader().load(imagePaths[index++]);
+let smallTexture = loadSharedTexture(imagePaths[index++]);
 let smallMaterial = new THREE.MeshBasicMaterial({ map: smallTexture, side: THREE.DoubleSide });
 let smallImage = new THREE.Mesh(smallFrameGeometry, smallMaterial);
 
@@ -546,14 +556,14 @@ scene.add(smallImage);
 
 
 // BIG WALL 2
-    texture = new THREE.TextureLoader().load(imagePaths[index++]);
+    texture = loadSharedTexture(imagePaths[index++]);
     material = new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide });
     image = new THREE.Mesh(frameGeometry, material);
     image.position.set(positionX + offset, 3, roomDepth / 2 - 0.51);
     scene.add(image);
 
 // Small Image (Right Next to the Large One)
-smallTexture = new THREE.TextureLoader().load(imagePaths[index++]);
+smallTexture = loadSharedTexture(imagePaths[index++]);
 smallMaterial = new THREE.MeshBasicMaterial({ map: smallTexture, side: THREE.DoubleSide });
 smallImage = new THREE.Mesh(smallFrameGeometry, smallMaterial);
 
@@ -571,7 +581,7 @@ let offset = (i - 2) * 5;
 //LEFT WALL
 
 // Main images, Left wall (correctly rotated)
-let texture = new THREE.TextureLoader().load(imagePaths[index++]);
+let texture = loadSharedTexture(imagePaths[index++]);
 let material = new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide });
 let image = new THREE.Mesh(frameGeometry, material);
 image.rotation.y = Math.PI / 2;  // Rotate to align with the wall
@@ -581,7 +591,7 @@ image.position.set(positionX -roomWidth / 2 + 0.51, 3, offset);
 scene.add(image);
 
 // Small Image Next to the Large One
-let smallTexture = new THREE.TextureLoader().load(imagePaths[index++]);
+let smallTexture = loadSharedTexture(imagePaths[index++]);
 let smallMaterial = new THREE.MeshBasicMaterial({ map: smallTexture, side: THREE.DoubleSide });
 let smallImage = new THREE.Mesh(smallFrameGeometry, smallMaterial);
 smallImage.rotation.y = Math.PI / 2;  // Keep the same orientation as the large image
@@ -603,7 +613,7 @@ for (let i = 0; i < 5; i++) {
 
 
 // Main images, Right wall (fix: apply the same rotation)
-texture = new THREE.TextureLoader().load(imagePaths[index++]);
+texture = loadSharedTexture(imagePaths[index++]);
 material = new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide });
 image = new THREE.Mesh(frameGeometry, material);
 image.rotation.y = -Math.PI / 2; // Fix rotation direction
@@ -618,7 +628,7 @@ for (let i = 0; i < 5; i++) {
 
 
 // Small Image Next to the Large One
-smallTexture = new THREE.TextureLoader().load(imagePaths[index++]);
+smallTexture = loadSharedTexture(imagePaths[index++]);
 smallMaterial = new THREE.MeshBasicMaterial({ map: smallTexture, side: THREE.DoubleSide });
 smallImage = new THREE.Mesh(smallFrameGeometry, smallMaterial);
 smallImage.rotation.y = -Math.PI / 2;  // Keep the same orientation as the large image
@@ -836,12 +846,10 @@ document.addEventListener("keydown", (event) => {
     }
 });
 
-// Animation loop to continuously update the audio based on distance
-function animateAudio() {
-    updateAudio();
-    requestAnimationFrame(animateAudio);
-}
-animateAudio();
+// Update proximity/audio 10 times per second rather than every animation frame.
+// The videos and 3D scene continue rendering at full frame rate.
+updateAudio();
+const audioUpdateInterval = setInterval(updateAudio, 100);
 }
 
 
