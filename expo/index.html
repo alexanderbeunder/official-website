@@ -161,8 +161,26 @@
 
     <script>
         let scene, camera, renderer, controls;
-        let welcomeGifImage = null;
-        let welcomeGifTexture = null;
+        let welcomeVideo = null;
+        let welcomeVideoTexture = null;
+        const welcomeColumns = 5;
+        const welcomeRows = 3;
+        const welcomeTotalFrames = 15;
+        const welcomeFrameDuration = 70;
+        let welcomeCurrentFrame = 0;
+        let welcomeLastFrameTime = 0;
+
+        function updateWelcomeSprite(time) {
+            if (!welcomeVideoTexture || time - welcomeLastFrameTime < welcomeFrameDuration) return;
+            welcomeCurrentFrame = (welcomeCurrentFrame + 1) % welcomeTotalFrames;
+            const column = welcomeCurrentFrame % welcomeColumns;
+            const row = Math.floor(welcomeCurrentFrame / welcomeColumns);
+            welcomeVideoTexture.offset.set(
+                column / welcomeColumns,
+                1 - (row + 1) / welcomeRows
+            );
+            welcomeLastFrameTime = time;
+        }
         let moveForward = false, moveBackward = false, moveLeft = false, moveRight = false;
         let velocity = new THREE.Vector3();
         let direction = new THREE.Vector3();
@@ -256,15 +274,17 @@
             }
 
             // Reuse textures when the same image URL appears more than once.
-            // This avoids duplicate downloads and duplicate GPU texture uploads.
-            // Animated welcome GIF used for the first large artwork in the second hall.
-            welcomeGifImage = new Image();
-            welcomeGifImage.src = './welcome.gif';
-            welcomeGifTexture = new THREE.Texture(welcomeGifImage);
-            welcomeGifTexture.colorSpace = THREE.SRGBColorSpace;
-            welcomeGifImage.onload = () => { welcomeGifTexture.needsUpdate = true; };
-
+            // The welcome artwork is a sprite sheet: 15 GIF frames in a 5 x 3 grid.
             const textureLoader = new THREE.TextureLoader();
+            welcomeVideoTexture = textureLoader.load('./welcome-spritesheet.png');
+            welcomeVideoTexture.colorSpace = THREE.SRGBColorSpace;
+            welcomeVideoTexture.magFilter = THREE.LinearFilter;
+            welcomeVideoTexture.minFilter = THREE.LinearFilter;
+            welcomeVideoTexture.wrapS = THREE.RepeatWrapping;
+            welcomeVideoTexture.wrapT = THREE.RepeatWrapping;
+            welcomeVideoTexture.repeat.set(1 / welcomeColumns, 1 / welcomeRows);
+            welcomeVideoTexture.offset.set(0, 1 - 1 / welcomeRows);
+
             const textureCache = new Map();
             function loadSharedTexture(url) {
                 if (!textureCache.has(url)) {
@@ -535,7 +555,7 @@ const imagePaths = [
      // Load texture for main image
     let texture;
     if (i === 0) {
-        texture = welcomeGifTexture;
+        texture = welcomeVideoTexture;
     } else {
         texture = loadSharedTexture(imagePaths[index]);
     }
@@ -901,11 +921,8 @@ const audioUpdateInterval = setInterval(updateAudio, 100);
         }
 
         function animate() {
-    if (welcomeGifImage.complete && welcomeGifImage.naturalWidth > 0) {
-        welcomeGifTexture.needsUpdate = true;
-    }
-
             requestAnimationFrame(animate);
+            if (welcomeVideoTexture) updateWelcomeSprite(performance.now());
             if (controls && controls.isLocked) {
                 const speed = 0.2;
                 direction.z = Number(moveForward) - Number(moveBackward);
