@@ -255,6 +255,13 @@
 
             // Reuse textures when the same image URL appears more than once.
             // This avoids duplicate downloads and duplicate GPU texture uploads.
+            // Animated welcome GIF used for the first large artwork in the second hall.
+            const welcomeGifImage = new Image();
+            welcomeGifImage.src = './welcome.gif';
+            const welcomeGifTexture = new THREE.Texture(welcomeGifImage);
+            welcomeGifTexture.colorSpace = THREE.SRGBColorSpace;
+            welcomeGifImage.onload = () => { welcomeGifTexture.needsUpdate = true; };
+
             const textureLoader = new THREE.TextureLoader();
             const textureCache = new Map();
             function loadSharedTexture(url) {
@@ -524,7 +531,13 @@ const imagePaths = [
 // BIG WALL 1
 
      // Load texture for main image
-    let texture = loadSharedTexture(imagePaths[index++]);
+    let texture;
+    if (i === 0) {
+        texture = welcomeGifTexture;
+    } else {
+        texture = loadSharedTexture(imagePaths[index]);
+    }
+    index++;
     let material = new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide });
     let image = new THREE.Mesh(frameGeometry, material);
      // Position main image
@@ -886,6 +899,10 @@ const audioUpdateInterval = setInterval(updateAudio, 100);
         }
 
         function animate() {
+    if (welcomeGifImage.complete && welcomeGifImage.naturalWidth > 0) {
+        welcomeGifTexture.needsUpdate = true;
+    }
+
             requestAnimationFrame(animate);
             if (controls && controls.isLocked) {
                 const speed = 0.2;
