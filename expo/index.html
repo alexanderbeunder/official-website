@@ -33,16 +33,32 @@
     display: inline-block;
 }
 
-        /* Mobile joystick: its touch zone is invisible. */
+        /* Mobile joystick: same placement as the other 3D room. */
         #joystick-container {
-            position: fixed;
-            left: 0;
-            bottom: 0;
-            width: 48vw;
-            height: 55vh;
-            z-index: 1001;
-            display: none;
-            touch-action: none;
+            position: fixed; bottom: 20px; left: 20px;
+            width: 150px; height: 150px; z-index: 1100;
+            display: none; touch-action: none;
+        }
+        .mobile-controls {
+            position: fixed; bottom: 60px; right: 20px;
+            display: none; justify-content: center; align-items: center;
+            gap: 20px; z-index: 1100;
+        }
+        .mobile-controls-up {
+            position: fixed; bottom: 110px; right: 50px;
+            display: none; z-index: 1100;
+        }
+        .mobile-controls-down {
+            position: fixed; bottom: 10px; right: 50px;
+            display: none; z-index: 1100;
+        }
+        .mobile-controls button,
+        .mobile-controls-up button,
+        .mobile-controls-down button {
+            width: 40px; height: 40px; font-size: 20px;
+            border: none; background: #333; color: white;
+            border-radius: 5px; touch-action: none;
+            user-select: none; -webkit-user-select: none;
         }
 
         html, body { width: 100%; height: 100%; }
@@ -50,7 +66,10 @@
         canvas { touch-action: none; }
 
         @media (max-width: 1024px), (pointer: coarse) {
-            #joystick-container { display: block; }
+            #joystick-container,
+            .mobile-controls,
+            .mobile-controls-up,
+            .mobile-controls-down { display: flex; }
             #instructions { font-size: 18px; width: 90vw; box-sizing: border-box; }
         }
 
@@ -58,7 +77,13 @@
 </head>
 <body>
     <div id="instructions"> <span class="black-box">Click to enter</span><br /><br />Controls: WASD & mouse</div>
-    <div id="joystick-container" aria-hidden="true"></div>
+    <div id="joystick-container"></div>
+    <div class="mobile-controls">
+        <button id="rotateLeft" type="button">◀</button>
+        <button id="rotateRight" type="button">▶</button>
+    </div>
+    <div class="mobile-controls-up"><button id="moveUp" type="button">▲</button></div>
+    <div class="mobile-controls-down"><button id="moveDown" type="button">▼</button></div>
 
        
 
@@ -69,13 +94,11 @@
         let velocity = new THREE.Vector3();
         let direction = new THREE.Vector3();
         const isMobile = window.matchMedia('(pointer: coarse)').matches || /Android|iPhone|iPad|iPod|Mobi/i.test(navigator.userAgent);
-        let joystickForward = 0;
-        let joystickStrafe = 0;
-        let activeLookTouchId = null;
-        let lastLookX = 0;
-        let lastLookY = 0;
-        const mobileLookSensitivity = 0.004;
-        const mobileMoveSpeed = 0.2;
+        let moveX = 0, moveZ = 0;
+        let moveUp = false, moveDown = false;
+        let rotateLeft = false, rotateRight = false;
+        const mobileMoveSpeed = 0.2; // scaled for this smaller room
+        const rotationSpeed = 0.05;
 
         init();
         animate();
@@ -99,12 +122,11 @@
                 controls.getObject().position.set(50, 2.5, 70);
                 scene.add(controls.getObject());
             } else {
-                // Mobile: no pointer lock. Touch the intro to enter, then use the
-                // invisible joystick on the left and drag on the right to look around.
+                // Mobile controls: same joystick and four buttons as the other 3D room.
                 camera.position.set(50, 2.5, 70);
                 camera.rotation.order = 'YXZ';
                 const intro = document.getElementById('instructions');
-                intro.innerHTML = '<span class="black-box">Tap to enter</span><br /><br />Move with the invisible joystick on the left.<br />Drag on the right to look around.';
+                intro.innerHTML = '<span class="black-box">Tap to enter</span><br /><br />Use the joystick to move.<br />Use the arrow buttons to look and move vertically.';
                 intro.addEventListener('click', () => { intro.style.display = 'none'; });
                 intro.addEventListener('touchend', () => { intro.style.display = 'none'; }, { once: true, passive: true });
 
@@ -113,56 +135,37 @@
                         zone: document.getElementById('joystick-container'),
                         mode: 'dynamic',
                         position: { left: '50%', top: '50%' },
-                        color: 'transparent',
-                        size: 120
+                        color: 'grey'
                     });
                     joystick.on('move', (evt, data) => {
                         if (!data || !data.angle) return;
-                        const angle = data.angle.radian;
-                        const force = Math.min(data.force || 0, 1);
-                        joystickStrafe = Math.cos(angle) * force;
-                        joystickForward = Math.sin(angle) * force;
+                        const angle = data.angle.degree;
+                        const force = data.force;
+                        moveX = Math.cos(angle * (Math.PI / 180)) * force;
+                        moveZ = Math.sin(angle * (Math.PI / 180)) * force;
                     });
                     joystick.on('end', () => {
-                        joystickForward = 0;
-                        joystickStrafe = 0;
+                        moveX = 0;
+                        moveZ = 0;
                     });
                 }
 
-                // Right-hand touch drag controls camera direction.
-                renderer.domElement.addEventListener('touchstart', (event) => {
-                    for (const touch of event.changedTouches) {
-                        if (touch.clientX > window.innerWidth * 0.42 && activeLookTouchId === null) {
-                            activeLookTouchId = touch.identifier;
-                            lastLookX = touch.clientX;
-                            lastLookY = touch.clientY;
-                        }
-                    }
-                }, { passive: false });
-
-                renderer.domElement.addEventListener('touchmove', (event) => {
-                    if (activeLookTouchId === null) return;
-                    for (const touch of event.changedTouches) {
-                        if (touch.identifier === activeLookTouchId) {
-                            const dx = touch.clientX - lastLookX;
-                            const dy = touch.clientY - lastLookY;
-                            camera.rotation.y -= dx * mobileLookSensitivity;
-                            camera.rotation.x -= dy * mobileLookSensitivity;
-                            camera.rotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, camera.rotation.x));
-                            lastLookX = touch.clientX;
-                            lastLookY = touch.clientY;
-                            event.preventDefault();
-                        }
-                    }
-                }, { passive: false });
-
-                const endLookTouch = (event) => {
-                    for (const touch of event.changedTouches) {
-                        if (touch.identifier === activeLookTouchId) activeLookTouchId = null;
-                    }
+                const bindHold = (id, setter) => {
+                    const button = document.getElementById(id);
+                    button.addEventListener('touchstart', event => {
+                        event.preventDefault();
+                        setter(true);
+                    }, { passive: false });
+                    button.addEventListener('touchend', () => setter(false));
+                    button.addEventListener('touchcancel', () => setter(false));
+                    button.addEventListener('mousedown', () => setter(true));
+                    button.addEventListener('mouseup', () => setter(false));
+                    button.addEventListener('mouseleave', () => setter(false));
                 };
-                renderer.domElement.addEventListener('touchend', endLookTouch, { passive: true });
-                renderer.domElement.addEventListener('touchcancel', endLookTouch, { passive: true });
+                bindHold('rotateLeft', value => rotateLeft = value);
+                bindHold('rotateRight', value => rotateRight = value);
+                bindHold('moveUp', value => moveUp = value);
+                bindHold('moveDown', value => moveDown = value);
             }
 
             const roomWidth = 50, roomHeight = 15, roomDepth = 30;
@@ -757,14 +760,21 @@ animateAudio();
                 controls.moveRight(velocity.x);
                 controls.moveForward(velocity.z);
             } else if (isMobile) {
-                // Joystick up = forward, down = backward; left/right = strafing.
-                const yaw = camera.rotation.y;
-                const forwardX = Math.sin(yaw);
-                const forwardZ = -Math.cos(yaw);
-                const rightX = Math.cos(yaw);
-                const rightZ = Math.sin(yaw);
-                camera.position.x += (joystickForward * forwardX + joystickStrafe * rightX) * mobileMoveSpeed;
-                camera.position.z += (joystickForward * forwardZ + joystickStrafe * rightZ) * mobileMoveSpeed;
+                // Same joystick direction math as the other 3D room.
+                const angle = camera.rotation.y;
+                const forwardX = Math.sin(angle);
+                const forwardZ = Math.cos(angle);
+                const rightX = Math.cos(angle);
+                const rightZ = -Math.sin(angle);
+                const deltaX = (-moveZ * forwardX) + (moveX * rightX);
+                const deltaZ = (-moveZ * forwardZ) + (moveX * rightZ);
+                camera.position.x += deltaX * mobileMoveSpeed;
+                camera.position.z += deltaZ * mobileMoveSpeed;
+
+                camera.position.y += (Number(moveUp) - Number(moveDown)) * mobileMoveSpeed;
+                camera.position.y = Math.max(0, camera.position.y);
+                if (rotateLeft) camera.rotation.y += rotationSpeed;
+                if (rotateRight) camera.rotation.y -= rotationSpeed;
             }
             renderer.render(scene, camera);
         }
