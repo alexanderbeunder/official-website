@@ -101,16 +101,6 @@
             -webkit-tap-highlight-color: transparent;
         }
         #videoControls button:active { background: rgba(70, 70, 70, 0.95); }
-        #videoControlStatus {
-            color: white;
-            background: rgba(0, 0, 0, 0.75);
-            border-radius: 4px;
-            padding: 6px 8px;
-            font: 12px Arial, sans-serif;
-            text-align: right;
-            display: none;
-        }
-
         html, body { width: 100%; height: 100%; }
         body { overscroll-behavior: none; }
         canvas { touch-action: none; }
@@ -130,7 +120,6 @@
     <div id="videoControls">
         <button id="restartVideosBtn" type="button" aria-label="Restart video with sound" title="Restart video with sound">R</button>
         <button id="muteVideosBtn" type="button" aria-label="Mute video" title="Mute video">M</button>
-        <div id="videoControlStatus" role="status" aria-live="polite"></div>
     </div>
     <div id="instructions"> <span class="black-box">Click to enter</span><br /><br />Controls: WASD & mouse</div>
     <div id="joystick-container"></div>
@@ -663,7 +652,6 @@ const video2 = document.createElement('video');
     // Touch-friendly playback controls for both screens.
     const restartVideosButton = document.getElementById('restartVideosBtn');
     const muteVideosButton = document.getElementById('muteVideosBtn');
-    const videoControlStatus = document.getElementById('videoControlStatus');
 
     function updateMuteButton() {
         const bothMuted = video.muted && video2.muted;
@@ -680,11 +668,8 @@ const video2 = document.createElement('video');
         updateMuteButton();
         try {
             await Promise.all([video.play(), video2.play()]);
-            videoControlStatus.textContent = 'Videos restarted';
-            videoControlStatus.style.display = 'block';
         } catch (error) {
-            videoControlStatus.textContent = 'Tap again to allow sound playback';
-            videoControlStatus.style.display = 'block';
+            // Playback may be blocked by the browser; keep the interface unobtrusive.
         }
     });
 
@@ -693,8 +678,6 @@ const video2 = document.createElement('video');
         video.muted = shouldMute;
         video2.muted = shouldMute;
         updateMuteButton();
-        videoControlStatus.textContent = shouldMute ? 'Sound muted' : 'Sound on';
-        videoControlStatus.style.display = 'block';
     });
     updateMuteButton();
 
