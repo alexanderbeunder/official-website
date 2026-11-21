@@ -105,6 +105,32 @@
         body { overscroll-behavior: none; }
         canvas { touch-action: none; }
 
+
+        /* Keep video prompts readable on phones without changing desktop placement. */
+        @media (max-width: 1024px), (pointer: coarse) {
+            .video-instructions {
+                position: fixed !important;
+                top: auto !important;
+                bottom: calc(10px + env(safe-area-inset-bottom)) !important;
+                left: 50% !important;
+                transform: translateX(-50%) !important;
+                width: calc(100vw - 24px) !important;
+                max-width: 720px;
+                box-sizing: border-box;
+                padding: 7px 10px !important;
+                font-size: clamp(12px, 3.6vw, 16px) !important;
+                line-height: 1.35;
+                text-align: center;
+                white-space: normal;
+                overflow-wrap: break-word;
+                color: #fff !important;
+                background: rgba(0, 0, 0, 0.72) !important;
+                border-radius: 4px;
+                z-index: 1050;
+                pointer-events: none;
+            }
+        }
+
         @media (max-width: 1024px), (pointer: coarse) {
             #joystick-container,
             .mobile-controls,
@@ -701,6 +727,7 @@ scene.add(videoScreen2); // Add to scene
 
     // Text instructions
     const instructions = document.createElement("div");
+    instructions.className = "video-instructions";
     instructions.innerHTML = "▣ Press 'R' to restart the video with sound</br>▣ Press 'M' to mute it.";
     instructions.style.position = "absolute";
     instructions.style.top = "85%";
@@ -716,6 +743,7 @@ scene.add(videoScreen2); // Add to scene
 
 
     const instructions2 = document.createElement("div");
+    instructions2.className = "video-instructions";
     instructions2.innerHTML = "▣ Press 'R' to restart the video with sound</br>▣ Press 'M' to mute it.";
     instructions2.style.position = "absolute";
     instructions2.style.top = "85%";
