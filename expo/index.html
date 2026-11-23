@@ -481,6 +481,22 @@
             head.position.set(0, 1.62, 0);
             group.add(head);
 
+            // Small contrasting eyes on the front of the head (local +Z).
+            // Their direction makes each visitor's viewing orientation visible.
+            const eyeWhiteMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
+            const pupilMaterial = new THREE.MeshBasicMaterial({ color: 0x111111 });
+            const eyeGeometry = new THREE.SphereGeometry(0.035, 8, 6);
+            const pupilGeometry = new THREE.SphereGeometry(0.018, 8, 6);
+            [-1, 1].forEach(side => {
+                const eye = new THREE.Mesh(eyeGeometry, eyeWhiteMaterial);
+                eye.position.set(side * 0.065, 1.665, 0.145);
+                group.add(eye);
+
+                const pupil = new THREE.Mesh(pupilGeometry, pupilMaterial);
+                pupil.position.set(side * 0.065, 1.665, 0.176);
+                group.add(pupil);
+            });
+
             const torso = makeStickLine(group, color, [
                 new THREE.Vector3(0, 1.43, 0), new THREE.Vector3(0, 0.72, 0)
             ]);
@@ -532,10 +548,11 @@
             if (visitor.lastX !== null) {
                 const moved = Math.hypot(payload.x - visitor.lastX, payload.z - visitor.lastZ);
                 visitor.walking = moved > 0.025;
-                if (visitor.walking) {
-                    // Face the direction of travel.
-                    visitor.group.rotation.y = Math.atan2(payload.x - visitor.lastX, payload.z - visitor.lastZ);
-                }
+            }
+            // The camera looks along local -Z; the stick figure's eyes face +Z.
+            // Rotate the figure by 180 degrees relative to the visitor's camera yaw.
+            if (Number.isFinite(payload.rotation)) {
+                visitor.group.rotation.y = payload.rotation + Math.PI;
             }
             visitor.lastX = payload.x;
             visitor.lastZ = payload.z;
@@ -630,7 +647,8 @@
                             name: data.name,
                             x: Number.isFinite(data.x) ? data.x : 0,
                             y: Number.isFinite(data.y) ? data.y : 2.5,
-                            z: Number.isFinite(data.z) ? data.z : 0
+                            z: Number.isFinite(data.z) ? data.z : 0,
+                            rotation: Number.isFinite(data.rotation) ? data.rotation : 0
                         });
                     });
                     for (const id of remoteVisitors.keys()) {
@@ -640,7 +658,7 @@
                 .on('presence', { event: 'join' }, ({ key, newPresences }) => {
                     if (key === visitorId) return;
                     (newPresences || []).forEach(data => updateRemoteVisitor({
-                        id: key, name: data.name, x: data.x, y: data.y, z: data.z
+                        id: key, name: data.name, x: data.x, y: data.y, z: data.z, rotation: data.rotation
                     }));
                 })
                 .on('presence', { event: 'leave' }, ({ key }) => removeRemoteVisitor(key))
@@ -654,6 +672,7 @@
                             x: currentVisitorPosition().x,
                             y: currentVisitorPosition().y,
                             z: currentVisitorPosition().z,
+                            rotation: currentVisitorPosition().rotation,
                             joinedAt: new Date().toISOString()
                         });
                     }
