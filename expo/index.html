@@ -213,6 +213,7 @@
         const VOICE_DISCONNECT_DISTANCE = 15;
         const voicePeers = new Map();
         let localMicrophoneStream = null;
+        let voiceAudioContext = null;
         let voiceEnabled = false;
         let voiceStatusTimer = null;
 
@@ -245,7 +246,10 @@
                 ignoreOffer: false,
                 isSettingRemoteAnswerPending: false,
                 polite: visitorId.localeCompare(peerId) > 0,
-                audio: null
+                audio: null,
+                analyser: null,
+                analyserSource: null,
+                analyserData: null
             };
             voicePeers.set(peerId, peer);
 
@@ -269,7 +273,25 @@
                     peer.audio = audio;
                 }
                 const stream = event.streams && event.streams[0];
-                if (stream) audio.srcObject = stream;
+                if (stream) {
+                    audio.srcObject = stream;
+                    try {
+                        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                        if (AudioContextClass) {
+                            if (!voiceAudioContext) voiceAudioContext = new AudioContextClass();
+                            if (voiceAudioContext.state === 'suspended') voiceAudioContext.resume().catch(() => {});
+                            if (peer.analyserSource) peer.analyserSource.disconnect();
+                            peer.analyser = voiceAudioContext.createAnalyser();
+                            peer.analyser.fftSize = 512;
+                            peer.analyser.smoothingTimeConstant = 0.65;
+                            peer.analyserData = new Uint8Array(peer.analyser.fftSize);
+                            peer.analyserSource = voiceAudioContext.createMediaStreamSource(stream);
+                            peer.analyserSource.connect(peer.analyser);
+                        }
+                    } catch (error) {
+                        console.warn('Could not analyse incoming voice level:', error);
+                    }
+                }
                 audio.play().catch(() => setVoiceStatus('Click the page to allow audio playback'));
             };
 
@@ -333,6 +355,12 @@
             const peer = voicePeers.get(peerId);
             if (!peer) return;
             try { peer.pc.ontrack = null; peer.pc.close(); } catch (error) {}
+            if (peer.analyserSource) {
+                try { peer.analyserSource.disconnect(); } catch (error) {}
+            }
+            if (peer.analyser) {
+                try { peer.analyser.disconnect(); } catch (error) {}
+            }
             if (peer.audio) {
                 peer.audio.pause();
                 peer.audio.srcObject = null;
@@ -497,6 +525,15 @@
                 group.add(pupil);
             });
 
+            // Mouth opens and closes according to the incoming voice audio level.
+            const mouth = new THREE.Mesh(
+                new THREE.SphereGeometry(0.045, 10, 8),
+                new THREE.MeshBasicMaterial({ color: 0x171717 })
+            );
+            mouth.position.set(0, 1.555, -0.151);
+            mouth.scale.set(1.15, 0.18, 0.35);
+            group.add(mouth);
+
             const torso = makeStickLine(group, color, [
                 new THREE.Vector3(0, 1.43, 0), new THREE.Vector3(0, 0.72, 0)
             ]);
@@ -522,7 +559,8 @@
 
             const visitor = {
                 group, label, name: name || 'Visitor',
-                torso, leftArm, rightArm, leftLeg, rightLeg,
+                torso, leftArm, rightArm, leftLeg, rightLeg, mouth,
+                audioLevel: 0,
                 walking: false, walkPhase: Math.random() * Math.PI * 2,
                 lastX: null, lastZ: null
             };
@@ -566,7 +604,25 @@
 
         function animateRemoteVisitors(deltaSeconds) {
             const now = performance.now() * 0.001;
-            for (const visitor of remoteVisitors.values()) {
+            for (const [peerId, visitor] of remoteVisitors.entries()) {
+                const voicePeer = voicePeers.get(peerId);
+                let level = 0;
+                if (voicePeer && voicePeer.analyser && voicePeer.analyserData) {
+                    voicePeer.analyser.getByteTimeDomainData(voicePeer.analyserData);
+                    let sumSquares = 0;
+                    for (let i = 0; i < voicePeer.analyserData.length; i++) {
+                        const sample = (voicePeer.analyserData[i] - 128) / 128;
+                        sumSquares += sample * sample;
+                    }
+                    level = Math.sqrt(sumSquares / voicePeer.analyserData.length);
+                }
+                // Smooth the mouth response and ignore background noise below the threshold.
+                const targetMouthOpen = level > 0.035
+                    ? Math.min(1.8, 0.18 + (level - 0.035) * 18)
+                    : 0.18;
+                visitor.audioLevel += (targetMouthOpen - visitor.audioLevel) * Math.min(1, deltaSeconds * 14);
+                visitor.mouth.scale.y = visitor.audioLevel;
+
                 if (visitor.walking) visitor.walkPhase += deltaSeconds * 9;
                 else visitor.walkPhase *= 0.85;
 
