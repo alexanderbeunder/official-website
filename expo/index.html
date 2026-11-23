@@ -500,6 +500,7 @@
             const label = makeNameSprite(name || 'Visitor', color);
             label.position.y = 2.05;
             group.add(label);
+            group.scale.set(2.45, 2.45, 2.45);
             group.position.y = AVATAR_FLOOR_Y;
             scene.add(group);
 
@@ -521,6 +522,11 @@
             const oldZ = visitor.group.position.z;
             visitor.group.position.x = payload.x;
             visitor.group.position.z = payload.z;
+            // Camera height is measured from the same starting eye level (y=2.5).
+            // Offset the avatar from the floor by the visitor's change in height.
+            if (Number.isFinite(payload.y)) {
+                visitor.group.position.y = AVATAR_FLOOR_Y + (payload.y - 2.5);
+            }
 
             if (visitor.lastX !== null) {
                 const moved = Math.hypot(payload.x - visitor.lastX, payload.z - visitor.lastZ);
@@ -591,6 +597,7 @@
                 id: visitorId,
                 name: visitorName,
                 x: player.position.x,
+                y: player.position.y,
                 z: player.position.z,
                 rotation: controls ? controls.getObject().rotation.y : camera.rotation.y
             };
@@ -621,6 +628,7 @@
                             id,
                             name: data.name,
                             x: Number.isFinite(data.x) ? data.x : 0,
+                            y: Number.isFinite(data.y) ? data.y : 2.5,
                             z: Number.isFinite(data.z) ? data.z : 0
                         });
                     });
@@ -631,7 +639,7 @@
                 .on('presence', { event: 'join' }, ({ key, newPresences }) => {
                     if (key === visitorId) return;
                     (newPresences || []).forEach(data => updateRemoteVisitor({
-                        id: key, name: data.name, x: data.x, z: data.z
+                        id: key, name: data.name, x: data.x, y: data.y, z: data.z
                     }));
                 })
                 .on('presence', { event: 'leave' }, ({ key }) => removeRemoteVisitor(key))
@@ -643,6 +651,7 @@
                         await multiplayerChannel.track({
                             name: visitorName,
                             x: currentVisitorPosition().x,
+                            y: currentVisitorPosition().y,
                             z: currentVisitorPosition().z,
                             joinedAt: new Date().toISOString()
                         });
@@ -1479,7 +1488,7 @@ const audioUpdateInterval = setInterval(updateAudio, 100);
                 controls.moveRight(velocity.x);
                 controls.moveForward(velocity.z);
                 controls.getObject().position.y += (Number(moveUp) - Number(moveDown)) * speed;
-                controls.getObject().position.y = Math.max(-5.8, Math.min(7, controls.getObject().position.y));
+                controls.getObject().position.y = Math.max(-5.8, controls.getObject().position.y);
             } else if (isMobile) {
                 // Same joystick direction math as the other 3D room.
                 const angle = camera.rotation.y;
