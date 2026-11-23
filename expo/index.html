@@ -501,7 +501,6 @@
             label.position.y = 2.05;
             group.add(label);
             group.position.y = AVATAR_FLOOR_Y;
-            group.scale.set(4, 4, 4);
             scene.add(group);
 
             const visitor = {
@@ -805,20 +804,28 @@
             
 
             
-            function addFloorGrid(positionX) {
+            function addFloorGrid() {
+                // One continuous grid across the whole exhibition world,
+                // including the open space between and outside the halls.
                 const points = [];
-                const halfW = 25, halfD = 15, step = 2;
-                for (let x = -halfW; x <= halfW + 0.001; x += step) {
-                    points.push(new THREE.Vector3(positionX + x, -7.485, -halfD));
-                    points.push(new THREE.Vector3(positionX + x, -7.485, halfD));
+                const halfSize = 500;
+                const step = 5; // Larger spacing than the previous 2-unit grid.
+                const floorY = -7.485;
+
+                for (let x = -halfSize; x <= halfSize; x += step) {
+                    points.push(new THREE.Vector3(x, floorY, -halfSize));
+                    points.push(new THREE.Vector3(x, floorY, halfSize));
                 }
-                for (let z = -halfD; z <= halfD + 0.001; z += step) {
-                    points.push(new THREE.Vector3(positionX - halfW, -7.485, z));
-                    points.push(new THREE.Vector3(positionX + halfW, -7.485, z));
+                for (let z = -halfSize; z <= halfSize; z += step) {
+                    points.push(new THREE.Vector3(-halfSize, floorY, z));
+                    points.push(new THREE.Vector3(halfSize, floorY, z));
                 }
+
                 const geometry = new THREE.BufferGeometry().setFromPoints(points);
                 const material = new THREE.LineBasicMaterial({
-                    color: 0xb8b8b8, transparent: true, opacity: 0.42
+                    color: 0xb8b8b8,
+                    transparent: true,
+                    opacity: 0.42
                 });
                 const grid = new THREE.LineSegments(geometry, material);
                 grid.renderOrder = 1;
@@ -826,7 +833,6 @@
             }
 
             function createRoom(positionX) {
-                addFloorGrid(positionX);
                 const roomGeometry = new THREE.BoxGeometry(50, 15, 30);
 
     // Create materials for each side
@@ -999,7 +1005,6 @@ let smallTexture = loadSharedTexture(imagePaths[index++]);
 
 
             function createRoom2(positionX) {
-                addFloorGrid(positionX);
                 const roomGeometry = new THREE.BoxGeometry(50, 15, 30);
 
                 const wallMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.BackSide, transparent: true, opacity: 0.5 });
@@ -1419,6 +1424,7 @@ const audioUpdateInterval = setInterval(updateAudio, 100);
 
 
 
+            addFloorGrid(); // Continuous floor grid across both halls and surrounding space.
             createRoom(0);  // First room
             createRoom2(100); // Second room, offset by 100 units
 
