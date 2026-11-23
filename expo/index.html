@@ -176,7 +176,7 @@
         <button id="restartVideosBtn" type="button" aria-label="Restart video with sound" title="Restart video with sound">R</button>
         <button id="muteVideosBtn" type="button" aria-label="Mute video" title="Mute video">M</button>
     </div>
-    <div id="instructions"> <span class="black-box">Click to enter</span><br /><br />Controls: WASD & mouse</div>
+    <div id="instructions"> <span class="black-box">Click to enter</span><br /><br />Controls: WASD & mouse · ↑ / ↓ = up / down</div>
     <div id="joystick-container"></div>
     <div class="mobile-controls">
         <button id="rotateLeft" type="button">◀</button>
@@ -347,7 +347,7 @@
             let nearbyCount = 0;
 
             for (const [peerId, visitor] of remoteVisitors.entries()) {
-                const distance = localPosition.distanceTo(visitor.group.position);
+                const distance = Math.hypot(localPosition.x - visitor.group.position.x, localPosition.z - visitor.group.position.z);
                 const existing = voicePeers.has(peerId);
 
                 if (distance <= VOICE_HEAR_DISTANCE) {
@@ -449,22 +449,66 @@
             return sprite;
         }
 
+        // Visitors are lightweight procedural stick figures (no external GIF needed).
+        // Their local feet are exactly at y=0; the whole figure sits on the room floor.
+        const AVATAR_FLOOR_Y = -7.49;
+
+        function makeStickLine(group, color, points, width = 3) {
+            const geometry = new THREE.BufferGeometry().setFromPoints(points);
+            const material = new THREE.LineBasicMaterial({ color, linewidth: width });
+            const line = new THREE.Line(geometry, material);
+            group.add(line);
+            return line;
+        }
+
+        function setStickLine(line, points) {
+            const attr = line.geometry.attributes.position;
+            points.forEach((p, i) => attr.setXYZ(i, p.x, p.y, p.z));
+            attr.needsUpdate = true;
+            line.geometry.computeBoundingSphere();
+        }
+
         function createRemoteVisitor(id, name) {
             if (remoteVisitors.has(id)) return remoteVisitors.get(id);
             const hue = Math.abs([...id].reduce((sum, ch) => sum + ch.charCodeAt(0), 0) * 37) % 360;
-            const color = new THREE.Color('hsl(' + hue + ', 85%, 58%)');
-            const dot = new THREE.Mesh(
-                new THREE.SphereGeometry(0.22, 12, 10),
+            const color = new THREE.Color('hsl(' + hue + ', 72%, 38%)');
+            const group = new THREE.Group();
+
+            const head = new THREE.Mesh(
+                new THREE.SphereGeometry(0.16, 12, 10),
                 new THREE.MeshBasicMaterial({ color })
             );
+            head.position.set(0, 1.62, 0);
+            group.add(head);
+
+            const torso = makeStickLine(group, color, [
+                new THREE.Vector3(0, 1.43, 0), new THREE.Vector3(0, 0.72, 0)
+            ]);
+            const leftArm = makeStickLine(group, color, [
+                new THREE.Vector3(0, 1.28, 0), new THREE.Vector3(-0.28, 0.82, 0)
+            ]);
+            const rightArm = makeStickLine(group, color, [
+                new THREE.Vector3(0, 1.28, 0), new THREE.Vector3(0.28, 0.82, 0)
+            ]);
+            const leftLeg = makeStickLine(group, color, [
+                new THREE.Vector3(0, 0.72, 0), new THREE.Vector3(-0.16, 0, 0)
+            ]);
+            const rightLeg = makeStickLine(group, color, [
+                new THREE.Vector3(0, 0.72, 0), new THREE.Vector3(0.16, 0, 0)
+            ]);
+
             const label = makeNameSprite(name || 'Visitor', color);
-            const group = new THREE.Group();
-            group.add(dot);
+            label.position.y = 2.05;
             group.add(label);
-            dot.position.y = 0.22;
-            label.position.y = 1.05;
+            group.position.y = AVATAR_FLOOR_Y;
             scene.add(group);
-            const visitor = { group, label, name: name || 'Visitor' };
+
+            const visitor = {
+                group, label, name: name || 'Visitor',
+                torso, leftArm, rightArm, leftLeg, rightLeg,
+                walking: false, walkPhase: Math.random() * Math.PI * 2,
+                lastX: null, lastZ: null
+            };
             remoteVisitors.set(id, visitor);
             return visitor;
         }
@@ -473,11 +517,57 @@
             if (!payload || payload.id === visitorId ||
                 !Number.isFinite(payload.x) || !Number.isFinite(payload.z)) return;
             const visitor = createRemoteVisitor(payload.id, payload.name);
-            visitor.group.position.set(payload.x, 0, payload.z);
+            const oldX = visitor.group.position.x;
+            const oldZ = visitor.group.position.z;
+            visitor.group.position.x = payload.x;
+            visitor.group.position.z = payload.z;
+
+            if (visitor.lastX !== null) {
+                const moved = Math.hypot(payload.x - visitor.lastX, payload.z - visitor.lastZ);
+                visitor.walking = moved > 0.025;
+                if (visitor.walking) {
+                    // Face the direction of travel.
+                    visitor.group.rotation.y = Math.atan2(payload.x - visitor.lastX, payload.z - visitor.lastZ);
+                }
+            }
+            visitor.lastX = payload.x;
+            visitor.lastZ = payload.z;
+
             if (payload.name && visitor.name !== payload.name) {
                 visitor.label.material.map.dispose();
                 visitor.label.material.map = makeNameSprite(payload.name).material.map;
                 visitor.name = payload.name;
+            }
+        }
+
+        function animateRemoteVisitors(deltaSeconds) {
+            const now = performance.now() * 0.001;
+            for (const visitor of remoteVisitors.values()) {
+                if (visitor.walking) visitor.walkPhase += deltaSeconds * 9;
+                else visitor.walkPhase *= 0.85;
+
+                const swing = visitor.walking ? Math.sin(visitor.walkPhase) * 0.28 : 0;
+                const armSwing = visitor.walking ? Math.sin(visitor.walkPhase + Math.PI) * 0.22 : 0;
+                setStickLine(visitor.leftLeg, [
+                    new THREE.Vector3(0, 0.72, 0),
+                    new THREE.Vector3(-0.16 + swing, 0.36, 0),
+                    new THREE.Vector3(-0.16 + swing * 1.35, 0, 0)
+                ]);
+                setStickLine(visitor.rightLeg, [
+                    new THREE.Vector3(0, 0.72, 0),
+                    new THREE.Vector3(0.16 - swing, 0.36, 0),
+                    new THREE.Vector3(0.16 - swing * 1.35, 0, 0)
+                ]);
+                setStickLine(visitor.leftArm, [
+                    new THREE.Vector3(0, 1.28, 0),
+                    new THREE.Vector3(-0.18 + armSwing, 1.02, 0),
+                    new THREE.Vector3(-0.28 + armSwing, 0.82, 0)
+                ]);
+                setStickLine(visitor.rightArm, [
+                    new THREE.Vector3(0, 1.28, 0),
+                    new THREE.Vector3(0.18 - armSwing, 1.02, 0),
+                    new THREE.Vector3(0.28 - armSwing, 0.82, 0)
+                ]);
             }
         }
 
@@ -714,7 +804,28 @@
             
 
             
+            function addFloorGrid(positionX) {
+                const points = [];
+                const halfW = 25, halfD = 15, step = 2;
+                for (let x = -halfW; x <= halfW + 0.001; x += step) {
+                    points.push(new THREE.Vector3(positionX + x, -7.485, -halfD));
+                    points.push(new THREE.Vector3(positionX + x, -7.485, halfD));
+                }
+                for (let z = -halfD; z <= halfD + 0.001; z += step) {
+                    points.push(new THREE.Vector3(positionX - halfW, -7.485, z));
+                    points.push(new THREE.Vector3(positionX + halfW, -7.485, z));
+                }
+                const geometry = new THREE.BufferGeometry().setFromPoints(points);
+                const material = new THREE.LineBasicMaterial({
+                    color: 0xb8b8b8, transparent: true, opacity: 0.42
+                });
+                const grid = new THREE.LineSegments(geometry, material);
+                grid.renderOrder = 1;
+                scene.add(grid);
+            }
+
             function createRoom(positionX) {
+                addFloorGrid(positionX);
                 const roomGeometry = new THREE.BoxGeometry(50, 15, 30);
 
     // Create materials for each side
@@ -887,6 +998,7 @@ let smallTexture = loadSharedTexture(imagePaths[index++]);
 
 
             function createRoom2(positionX) {
+                addFloorGrid(positionX);
                 const roomGeometry = new THREE.BoxGeometry(50, 15, 30);
 
                 const wallMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.BackSide, transparent: true, opacity: 0.5 });
@@ -1322,6 +1434,8 @@ const audioUpdateInterval = setInterval(updateAudio, 100);
                     case 'KeyS': moveBackward = true; break;
                     case 'KeyA': moveLeft = true; break;
                     case 'KeyD': moveRight = true; break;
+                    case 'ArrowUp': if (!isMobile) { moveUp = true; event.preventDefault(); } break;
+                    case 'ArrowDown': if (!isMobile) { moveDown = true; event.preventDefault(); } break;
                 }
             });
 
@@ -1331,6 +1445,8 @@ const audioUpdateInterval = setInterval(updateAudio, 100);
                     case 'KeyS': moveBackward = false; break;
                     case 'KeyA': moveLeft = false; break;
                     case 'KeyD': moveRight = false; break;
+                    case 'ArrowUp': moveUp = false; break;
+                    case 'ArrowDown': moveDown = false; break;
                 }
             });
 
@@ -1341,6 +1457,9 @@ const audioUpdateInterval = setInterval(updateAudio, 100);
         function animate() {
             requestAnimationFrame(animate);
             const frameTime = performance.now();
+            const deltaSeconds = Math.min(0.05, (frameTime - (animate.lastFrameTime || frameTime)) / 1000);
+            animate.lastFrameTime = frameTime;
+            animateRemoteVisitors(deltaSeconds);
             if (welcomeVideoTexture) updateWelcomeSprite(frameTime);
             broadcastVisitorPosition(frameTime);
             if (controls && controls.isLocked) {
@@ -1352,6 +1471,8 @@ const audioUpdateInterval = setInterval(updateAudio, 100);
                 velocity.x = direction.x * speed;
                 controls.moveRight(velocity.x);
                 controls.moveForward(velocity.z);
+                controls.getObject().position.y += (Number(moveUp) - Number(moveDown)) * speed;
+                controls.getObject().position.y = Math.max(-5.8, Math.min(7, controls.getObject().position.y));
             } else if (isMobile) {
                 // Same joystick direction math as the other 3D room.
                 const angle = camera.rotation.y;
