@@ -335,14 +335,12 @@
                 if (stream) {
                     audio.srcObject = stream;
                     try {
-                        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-                        if (AudioContextClass) {
-                            if (!voiceAudioContext) voiceAudioContext = new AudioContextClass();
+                        if (voiceAudioContext) {
                             if (voiceAudioContext.state === 'suspended') voiceAudioContext.resume().catch(() => {});
                             if (peer.analyserSource) peer.analyserSource.disconnect();
                             peer.analyser = voiceAudioContext.createAnalyser();
                             peer.analyser.fftSize = 512;
-                            peer.analyser.smoothingTimeConstant = 0.65;
+                            peer.analyser.smoothingTimeConstant = 0.45;
                             peer.analyserData = new Uint8Array(peer.analyser.fftSize);
                             peer.analyserSource = voiceAudioContext.createMediaStreamSource(stream);
                             peer.analyserSource.connect(peer.analyser);
@@ -489,6 +487,18 @@
                     },
                     video: false
                 });
+
+                // Start/resume the analyser context from this explicit button click.
+                // Desktop browsers may otherwise leave an AudioContext created later
+                // inside the WebRTC ontrack callback suspended.
+                const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                if (AudioContextClass) {
+                    if (!voiceAudioContext) voiceAudioContext = new AudioContextClass();
+                    if (voiceAudioContext.state === 'suspended') {
+                        await voiceAudioContext.resume();
+                    }
+                }
+
                 voiceEnabled = true;
                 button.textContent = '🔇 Mute microphone';
                 button.setAttribute('aria-pressed', 'true');
@@ -690,9 +700,9 @@
                 }
                 // A slightly higher gate helps prevent quiet room/speaker bleed from
                 // making a silent visitor appear to be talking.
-                const speechThreshold = 0.055;
+                const speechThreshold = 0.025;
                 const targetMouthOpen = level > speechThreshold
-                    ? Math.min(1.8, 0.18 + (level - speechThreshold) * 16)
+                    ? Math.min(1.8, 0.18 + (level - speechThreshold) * 22)
                     : 0.18;
                 visitor.audioLevel += (targetMouthOpen - visitor.audioLevel) * Math.min(1, deltaSeconds * 14);
                 visitor.mouth.scale.y = visitor.audioLevel;
