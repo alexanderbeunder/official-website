@@ -636,6 +636,7 @@
                 group, label, name: name || 'Visitor',
                 torso, leftArm, rightArm, leftLeg, rightLeg, mouth,
                 audioLevel: 0,
+                isMobile: false,
                 nextFootstepAt: 0,
                 walking: false, walkPhase: Math.random() * Math.PI * 2,
                 lastX: null, lastZ: null
@@ -648,6 +649,7 @@
             if (!payload || payload.id === visitorId ||
                 !Number.isFinite(payload.x) || !Number.isFinite(payload.z)) return;
             const visitor = createRemoteVisitor(payload.id, payload.name);
+            visitor.isMobile = payload.isMobile === true;
             const oldX = visitor.group.position.x;
             const oldZ = visitor.group.position.z;
             visitor.group.position.x = payload.x;
@@ -700,9 +702,12 @@
                 }
                 // A slightly higher gate helps prevent quiet room/speaker bleed from
                 // making a silent visitor appear to be talking.
-                const speechThreshold = 0.025;
+                // Desktop microphone levels can be quieter than mobile levels.
+                // Use a lower gate and stronger response for desktop visitors only.
+                const speechThreshold = visitor.isMobile ? 0.025 : 0.008;
+                const mouthSensitivity = visitor.isMobile ? 22 : 38;
                 const targetMouthOpen = level > speechThreshold
-                    ? Math.min(1.8, 0.18 + (level - speechThreshold) * 22)
+                    ? Math.min(1.8, 0.18 + (level - speechThreshold) * mouthSensitivity)
                     : 0.18;
                 visitor.audioLevel += (targetMouthOpen - visitor.audioLevel) * Math.min(1, deltaSeconds * 14);
                 visitor.mouth.scale.y = visitor.audioLevel;
@@ -779,7 +784,8 @@
                     const forward = new THREE.Vector3();
                     camera.getWorldDirection(forward);
                     return Math.atan2(-forward.x, -forward.z);
-                })()
+                })(),
+                isMobile: window.matchMedia('(pointer: coarse)').matches || /Android|iPhone|iPad|iPod|Mobi/i.test(navigator.userAgent)
             };
         }
 
@@ -810,7 +816,8 @@
                             x: Number.isFinite(data.x) ? data.x : 0,
                             y: Number.isFinite(data.y) ? data.y : 2.5,
                             z: Number.isFinite(data.z) ? data.z : 0,
-                            rotation: Number.isFinite(data.rotation) ? data.rotation : 0
+                            rotation: Number.isFinite(data.rotation) ? data.rotation : 0,
+                            isMobile: data.isMobile === true
                         });
                     });
                     for (const id of remoteVisitors.keys()) {
@@ -820,7 +827,7 @@
                 .on('presence', { event: 'join' }, ({ key, newPresences }) => {
                     if (key === visitorId) return;
                     (newPresences || []).forEach(data => updateRemoteVisitor({
-                        id: key, name: data.name, x: data.x, y: data.y, z: data.z, rotation: data.rotation
+                        id: key, name: data.name, x: data.x, y: data.y, z: data.z, rotation: data.rotation, isMobile: data.isMobile === true
                     }));
                 })
                 .on('presence', { event: 'leave' }, ({ key }) => removeRemoteVisitor(key))
@@ -835,6 +842,7 @@
                             y: currentVisitorPosition().y,
                             z: currentVisitorPosition().z,
                             rotation: currentVisitorPosition().rotation,
+                            isMobile: currentVisitorPosition().isMobile,
                             joinedAt: new Date().toISOString()
                         });
                     }
