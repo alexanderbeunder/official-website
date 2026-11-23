@@ -1508,7 +1508,8 @@ const audioUpdateInterval = setInterval(updateAudio, 100);
                 controls.moveRight(velocity.x);
                 controls.moveForward(velocity.z);
                 controls.getObject().position.y += (Number(moveUp) - Number(moveDown)) * speed;
-                controls.getObject().position.y = Math.max(-5.8, controls.getObject().position.y);
+                // Keep the camera at or above the standing eye height when the avatar's feet touch the floor.
+                controls.getObject().position.y = Math.max(2.5, controls.getObject().position.y);
             } else if (isMobile) {
                 // Same joystick direction math as the other 3D room.
                 const angle = camera.rotation.y;
@@ -1522,7 +1523,8 @@ const audioUpdateInterval = setInterval(updateAudio, 100);
                 camera.position.z += deltaZ * mobileMoveSpeed;
 
                 camera.position.y += (Number(moveUp) - Number(moveDown)) * mobileMoveSpeed;
-                camera.position.y = Math.max(0, camera.position.y);
+                // Same floor/standing-height limit as desktop.
+                camera.position.y = Math.max(2.5, camera.position.y);
                 if (rotateLeft) camera.rotation.y += rotationSpeed;
                 if (rotateRight) camera.rotation.y -= rotationSpeed;
             }
