@@ -500,7 +500,7 @@
             const label = makeNameSprite(name || 'Visitor', color);
             label.position.y = 2.05;
             group.add(label);
-            group.scale.set(2.45, 2.45, 2.45);
+            group.scale.set(6.17, 6.17, 6.17);
             group.position.y = AVATAR_FLOOR_Y;
             scene.add(group);
 
@@ -522,8 +522,9 @@
             const oldZ = visitor.group.position.z;
             visitor.group.position.x = payload.x;
             visitor.group.position.z = payload.z;
-            // Camera height is measured from the same starting eye level (y=2.5).
-            // Offset the avatar from the floor by the visitor's change in height.
+            // The avatar is scaled so its head aligns with a visitor's normal eye height
+            // when standing on the floor (camera eye level y=2.5).
+            // Offset the whole figure by the visitor's change in height.
             if (Number.isFinite(payload.y)) {
                 visitor.group.position.y = AVATAR_FLOOR_Y + (payload.y - 2.5);
             }
