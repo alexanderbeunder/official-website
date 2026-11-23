@@ -549,8 +549,8 @@
                 const moved = Math.hypot(payload.x - visitor.lastX, payload.z - visitor.lastZ);
                 visitor.walking = moved > 0.025;
             }
-            // The eyes face local -Z, the same forward direction as the camera.
-            // Apply the visitor's camera yaw directly so the eyes show their actual view direction.
+            // The eyes face local -Z. The broadcast yaw is derived from the camera's
+            // world-facing vector, so desktop pointer-lock and mobile rotation use one convention.
             if (Number.isFinite(payload.rotation)) {
                 visitor.group.rotation.y = payload.rotation;
             }
@@ -617,7 +617,13 @@
                 x: player.position.x,
                 y: player.position.y,
                 z: player.position.z,
-                rotation: controls ? controls.getObject().rotation.y : camera.rotation.y
+                // Derive yaw from the camera's actual world-facing direction.
+                // This works for PointerLockControls (desktop) and direct camera rotation (mobile).
+                rotation: (() => {
+                    const forward = new THREE.Vector3();
+                    camera.getWorldDirection(forward);
+                    return Math.atan2(-forward.x, -forward.z);
+                })()
             };
         }
 
