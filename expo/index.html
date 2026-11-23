@@ -159,8 +159,174 @@
        
 
 
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
         let scene, camera, renderer, controls;
+        // Multiplayer: add your Supabase project URL and publishable/anon key here.
+        // These are intended for browser use; protect the project with the SQL policies below.
+        const SUPABASE_URL = 'YOUR_SUPABASE_PROJECT_URL';
+        const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
+        const MULTIPLAYER_CHANNEL = 'threejs-exhibition-lobby';
+
+        let supabaseClient = null;
+        let multiplayerChannel = null;
+        let multiplayerReady = false;
+        let visitorId = (window.crypto && crypto.randomUUID)
+            ? crypto.randomUUID()
+            : 'visitor-' + Math.random().toString(36).slice(2);
+        let visitorName = (window.prompt('Welcome to the exhibition! What name should other visitors see?') || '').trim().slice(0, 24);
+        if (!visitorName) visitorName = 'Guest ' + visitorId.slice(0, 4);
+        const remoteVisitors = new Map();
+        let lastPositionBroadcast = 0;
+
+        function makeNameSprite(name, color) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 512;
+            canvas.height = 128;
+            const ctx = canvas.getContext('2d');
+            ctx.font = 'bold 44px Arial, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.lineWidth = 8;
+            ctx.strokeStyle = 'rgba(0,0,0,0.72)';
+            ctx.strokeText(name, 256, 64);
+            ctx.fillStyle = '#ffffff';
+            ctx.fillText(name, 256, 64);
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.minFilter = THREE.LinearFilter;
+            const sprite = new THREE.Sprite(new THREE.SpriteMaterial({
+                map: texture, transparent: true, depthTest: false
+            }));
+            sprite.scale.set(2.8, 0.7, 1);
+            return sprite;
+        }
+
+        function createRemoteVisitor(id, name) {
+            if (remoteVisitors.has(id)) return remoteVisitors.get(id);
+            const hue = Math.abs([...id].reduce((sum, ch) => sum + ch.charCodeAt(0), 0) * 37) % 360;
+            const color = new THREE.Color('hsl(' + hue + ', 85%, 58%)');
+            const dot = new THREE.Mesh(
+                new THREE.SphereGeometry(0.22, 12, 10),
+                new THREE.MeshBasicMaterial({ color })
+            );
+            const label = makeNameSprite(name || 'Visitor', color);
+            const group = new THREE.Group();
+            group.add(dot);
+            group.add(label);
+            dot.position.y = 0.22;
+            label.position.y = 1.05;
+            scene.add(group);
+            const visitor = { group, label, name: name || 'Visitor' };
+            remoteVisitors.set(id, visitor);
+            return visitor;
+        }
+
+        function updateRemoteVisitor(payload) {
+            if (!payload || payload.id === visitorId ||
+                !Number.isFinite(payload.x) || !Number.isFinite(payload.z)) return;
+            const visitor = createRemoteVisitor(payload.id, payload.name);
+            visitor.group.position.set(payload.x, 0, payload.z);
+            if (payload.name && visitor.name !== payload.name) {
+                visitor.label.material.map.dispose();
+                visitor.label.material.map = makeNameSprite(payload.name).material.map;
+                visitor.name = payload.name;
+            }
+        }
+
+        function removeRemoteVisitor(id) {
+            const visitor = remoteVisitors.get(id);
+            if (!visitor) return;
+            scene.remove(visitor.group);
+            visitor.group.traverse(object => {
+                if (object.geometry) object.geometry.dispose();
+                if (object.material) {
+                    if (object.material.map) object.material.map.dispose();
+                    object.material.dispose();
+                }
+            });
+            remoteVisitors.delete(id);
+        }
+
+        function currentVisitorPosition() {
+            const player = controls ? controls.getObject() : camera;
+            return {
+                id: visitorId,
+                name: visitorName,
+                x: player.position.x,
+                z: player.position.z,
+                rotation: controls ? controls.getObject().rotation.y : camera.rotation.y
+            };
+        }
+
+        function setupMultiplayer() {
+            if (!window.supabase || SUPABASE_URL.startsWith('YOUR_') ||
+                SUPABASE_ANON_KEY.startsWith('YOUR_')) {
+                console.info('Multiplayer is ready to configure: add your Supabase project URL and anon/publishable key.');
+                return;
+            }
+
+            supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            multiplayerChannel = supabaseClient.channel(MULTIPLAYER_CHANNEL, {
+                config: { presence: { key: visitorId }, broadcast: { self: false } }
+            });
+
+            multiplayerChannel
+                .on('presence', { event: 'sync' }, () => {
+                    const active = multiplayerChannel.presenceState();
+                    const presentIds = new Set();
+                    Object.entries(active).forEach(([id, entries]) => {
+                        if (id === visitorId) return;
+                        const data = entries && entries[0];
+                        if (!data) return;
+                        presentIds.add(id);
+                        updateRemoteVisitor({
+                            id,
+                            name: data.name,
+                            x: Number.isFinite(data.x) ? data.x : 0,
+                            z: Number.isFinite(data.z) ? data.z : 0
+                        });
+                    });
+                    for (const id of remoteVisitors.keys()) {
+                        if (!presentIds.has(id)) removeRemoteVisitor(id);
+                    }
+                })
+                .on('presence', { event: 'join' }, ({ key, newPresences }) => {
+                    if (key === visitorId) return;
+                    (newPresences || []).forEach(data => updateRemoteVisitor({
+                        id: key, name: data.name, x: data.x, z: data.z
+                    }));
+                })
+                .on('presence', { event: 'leave' }, ({ key }) => removeRemoteVisitor(key))
+                .on('broadcast', { event: 'position' }, ({ payload }) => updateRemoteVisitor(payload))
+                .subscribe(async status => {
+                    if (status === 'SUBSCRIBED') {
+                        multiplayerReady = true;
+                        await multiplayerChannel.track({
+                            name: visitorName,
+                            x: currentVisitorPosition().x,
+                            z: currentVisitorPosition().z,
+                            joinedAt: new Date().toISOString()
+                        });
+                    }
+                });
+
+            window.addEventListener('beforeunload', () => {
+                if (multiplayerChannel) supabaseClient.removeChannel(multiplayerChannel);
+            });
+        }
+
+        function broadcastVisitorPosition(time) {
+            if (!multiplayerReady || !multiplayerChannel || time - lastPositionBroadcast < 125) return;
+            lastPositionBroadcast = time;
+            const position = currentVisitorPosition();
+            multiplayerChannel.send({
+                type: 'broadcast',
+                event: 'position',
+                payload: position
+            });
+        }
+
+
         let welcomeVideo = null;
         let welcomeVideoTexture = null;
         const welcomeColumns = 5;
@@ -918,11 +1084,15 @@ const audioUpdateInterval = setInterval(updateAudio, 100);
                     case 'KeyD': moveRight = false; break;
                 }
             });
+
+            setupMultiplayer();
         }
 
         function animate() {
             requestAnimationFrame(animate);
-            if (welcomeVideoTexture) updateWelcomeSprite(performance.now());
+            const frameTime = performance.now();
+            if (welcomeVideoTexture) updateWelcomeSprite(frameTime);
+            broadcastVisitorPosition(frameTime);
             if (controls && controls.isLocked) {
                 const speed = 0.2;
                 direction.z = Number(moveForward) - Number(moveBackward);
