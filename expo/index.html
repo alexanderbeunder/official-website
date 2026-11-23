@@ -76,6 +76,31 @@
         }
         #fullscreenBtn:hover { background: rgba(0, 0, 0, 0.9); }
 
+        #voiceChatPanel {
+            position: fixed; top: 20px; left: 20px; z-index: 1200;
+            display: flex; align-items: center; gap: 9px;
+            max-width: calc(100vw - 170px);
+            padding: 8px 10px; border-radius: 5px;
+            background: rgba(0, 0, 0, 0.72); color: #fff;
+            font: 13px Arial, sans-serif;
+        }
+        #voiceToggle {
+            border: 1px solid rgba(255,255,255,.55);
+            border-radius: 4px; padding: 8px 10px;
+            color: #fff; background: #333; cursor: pointer;
+            font-size: 13px; white-space: nowrap;
+        }
+        #voiceToggle[aria-pressed="true"] { background: #287b58; }
+        #voiceStatus { font-size: 11px; line-height: 1.3; }
+        @media (max-width: 600px) {
+            #voiceChatPanel {
+                top: 12px; left: 12px; right: 12px;
+                max-width: none; gap: 7px; padding: 6px 8px;
+            }
+            #voiceToggle { font-size: 12px; padding: 7px 8px; }
+            #voiceStatus { font-size: 10px; }
+        }
+
         /* Video buttons are mobile-only and are shown by proximity logic. */
         #videoControls {
             position: fixed;
@@ -143,6 +168,10 @@
 </head>
 <body>
     <button id="fullscreenBtn" type="button">🔲 Fullscreen</button>
+    <div id="voiceChatPanel">
+        <button id="voiceToggle" type="button" aria-pressed="false">🎙 Enable microphone</button>
+        <span id="voiceStatus" aria-live="polite">Voice chat off</span>
+    </div>
     <div id="videoControls">
         <button id="restartVideosBtn" type="button" aria-label="Restart video with sound" title="Restart video with sound">R</button>
         <button id="muteVideosBtn" type="button" aria-label="Mute video" title="Mute video">M</button>
@@ -178,6 +207,225 @@
         if (!visitorName) visitorName = 'Guest ' + visitorId.slice(0, 4);
         const remoteVisitors = new Map();
         let lastPositionBroadcast = 0;
+
+        // Proximity voice chat: audio is sent peer-to-peer with WebRTC.
+        const VOICE_HEAR_DISTANCE = 12;
+        const VOICE_DISCONNECT_DISTANCE = 15;
+        const voicePeers = new Map();
+        let localMicrophoneStream = null;
+        let voiceEnabled = false;
+        let voiceStatusTimer = null;
+
+        function setVoiceStatus(message) {
+            const status = document.getElementById('voiceStatus');
+            if (status) status.textContent = message;
+        }
+
+        function sendVoiceSignal(peerId, payload) {
+            if (!multiplayerChannel || !multiplayerReady) return;
+            multiplayerChannel.send({
+                type: 'broadcast',
+                event: 'voice-signal',
+                payload: { from: visitorId, to: peerId, ...payload }
+            });
+        }
+
+        function getPeerConnection(peerId) {
+            let peer = voicePeers.get(peerId);
+            if (peer) return peer;
+
+            // Google STUN helps browsers discover their public network route.
+            // A TURN relay can be added later for networks that block direct P2P.
+            const pc = new RTCPeerConnection({
+                iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+            });
+            peer = {
+                pc,
+                makingOffer: false,
+                ignoreOffer: false,
+                isSettingRemoteAnswerPending: false,
+                polite: visitorId.localeCompare(peerId) > 0,
+                audio: null
+            };
+            voicePeers.set(peerId, peer);
+
+            if (localMicrophoneStream) {
+                localMicrophoneStream.getAudioTracks().forEach(track => pc.addTrack(track, localMicrophoneStream));
+            }
+
+            pc.onicecandidate = event => {
+                if (event.candidate) sendVoiceSignal(peerId, { candidate: event.candidate });
+            };
+
+            pc.ontrack = event => {
+                let audio = peer.audio;
+                if (!audio) {
+                    audio = document.createElement('audio');
+                    audio.autoplay = true;
+                    audio.playsInline = true;
+                    audio.dataset.voicePeer = peerId;
+                    audio.style.display = 'none';
+                    document.body.appendChild(audio);
+                    peer.audio = audio;
+                }
+                const stream = event.streams && event.streams[0];
+                if (stream) audio.srcObject = stream;
+                audio.play().catch(() => setVoiceStatus('Click the page to allow audio playback'));
+            };
+
+            pc.onconnectionstatechange = () => {
+                if (pc.connectionState === 'failed' || pc.connectionState === 'closed' || pc.connectionState === 'disconnected') {
+                    if (pc.connectionState !== 'disconnected') closeVoicePeer(peerId);
+                }
+            };
+
+            pc.onnegotiationneeded = async () => {
+                try {
+                    peer.makingOffer = true;
+                    await pc.setLocalDescription();
+                    sendVoiceSignal(peerId, { description: pc.localDescription });
+                } catch (error) {
+                    console.warn('Voice negotiation failed:', error);
+                } finally {
+                    peer.makingOffer = false;
+                }
+            };
+
+            return peer;
+        }
+
+        async function handleVoiceSignal(message) {
+            if (!message || message.to !== visitorId || !message.from) return;
+            const peerId = message.from;
+            const peer = getPeerConnection(peerId);
+            const pc = peer.pc;
+
+            try {
+                if (message.description) {
+                    const description = message.description;
+                    const readyForOffer = !peer.makingOffer &&
+                        (pc.signalingState === 'stable' || peer.isSettingRemoteAnswerPending);
+                    const offerCollision = description.type === 'offer' && !readyForOffer;
+                    peer.ignoreOffer = !peer.polite && offerCollision;
+                    if (peer.ignoreOffer) return;
+
+                    peer.isSettingRemoteAnswerPending = description.type === 'answer';
+                    await pc.setRemoteDescription(description);
+                    peer.isSettingRemoteAnswerPending = false;
+
+                    if (description.type === 'offer') {
+                        await pc.setLocalDescription();
+                        sendVoiceSignal(peerId, { description: pc.localDescription });
+                    }
+                } else if (message.candidate) {
+                    try {
+                        await pc.addIceCandidate(message.candidate);
+                    } catch (error) {
+                        if (!peer.ignoreOffer) throw error;
+                    }
+                }
+            } catch (error) {
+                console.warn('Voice signal error:', error);
+            }
+        }
+
+        function closeVoicePeer(peerId) {
+            const peer = voicePeers.get(peerId);
+            if (!peer) return;
+            try { peer.pc.ontrack = null; peer.pc.close(); } catch (error) {}
+            if (peer.audio) {
+                peer.audio.pause();
+                peer.audio.srcObject = null;
+                peer.audio.remove();
+            }
+            voicePeers.delete(peerId);
+        }
+
+        function updateProximityVoice() {
+            if (!scene || !multiplayerReady) return;
+            const localPosition = controls ? controls.getObject().position : camera.position;
+            let nearbyCount = 0;
+
+            for (const [peerId, visitor] of remoteVisitors.entries()) {
+                const distance = localPosition.distanceTo(visitor.group.position);
+                const existing = voicePeers.has(peerId);
+
+                if (distance <= VOICE_HEAR_DISTANCE) {
+                    nearbyCount++;
+                    if (voiceEnabled && !existing) getPeerConnection(peerId);
+                } else if (distance > VOICE_DISCONNECT_DISTANCE && existing) {
+                    closeVoicePeer(peerId);
+                }
+            }
+
+            if (!voiceEnabled) {
+                setVoiceStatus('Microphone off');
+            } else if (nearbyCount === 0) {
+                setVoiceStatus('Mic on · no visitors nearby');
+            } else {
+                setVoiceStatus('Mic on · ' + nearbyCount + ' visitor(s) nearby');
+            }
+        }
+
+        async function toggleVoiceChat() {
+            const button = document.getElementById('voiceToggle');
+            if (voiceEnabled) {
+                voiceEnabled = false;
+                if (localMicrophoneStream) {
+                    localMicrophoneStream.getTracks().forEach(track => track.stop());
+                    localMicrophoneStream = null;
+                }
+                for (const [peerId, peer] of voicePeers.entries()) {
+                    peer.pc.getSenders().forEach(sender => {
+                        if (sender.track) sender.replaceTrack(null).catch(() => {});
+                    });
+                }
+                button.textContent = '🎙 Enable microphone';
+                button.setAttribute('aria-pressed', 'false');
+                setVoiceStatus('Microphone off');
+                return;
+            }
+
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                setVoiceStatus('Microphone requires HTTPS and a supported browser');
+                return;
+            }
+            try {
+                setVoiceStatus('Requesting microphone permission…');
+                localMicrophoneStream = await navigator.mediaDevices.getUserMedia({
+                    audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+                    video: false
+                });
+                voiceEnabled = true;
+                button.textContent = '🔇 Mute microphone';
+                button.setAttribute('aria-pressed', 'true');
+
+                // Add the newly enabled microphone to existing nearby connections.
+                for (const [peerId, peer] of voicePeers.entries()) {
+                    const audioTrack = localMicrophoneStream.getAudioTracks()[0];
+                    const sender = peer.pc.getSenders().find(item => !item.track || item.track.kind === 'audio');
+                    if (sender) await sender.replaceTrack(audioTrack);
+                    else peer.pc.addTrack(audioTrack, localMicrophoneStream);
+                }
+                updateProximityVoice();
+            } catch (error) {
+                console.error('Microphone access failed:', error);
+                setVoiceStatus(error.name === 'NotAllowedError'
+                    ? 'Microphone permission denied'
+                    : 'Could not access microphone');
+            }
+        }
+
+        function setupVoiceChat() {
+            const button = document.getElementById('voiceToggle');
+            if (button) button.addEventListener('click', toggleVoiceChat);
+            setVoiceStatus('Microphone off · enable to talk');
+            setInterval(updateProximityVoice, 300);
+            window.addEventListener('beforeunload', () => {
+                for (const peerId of voicePeers.keys()) closeVoicePeer(peerId);
+                if (localMicrophoneStream) localMicrophoneStream.getTracks().forEach(track => track.stop());
+            });
+        }
 
         function makeNameSprite(name, color) {
             const canvas = document.createElement('canvas');
@@ -298,6 +546,7 @@
                 })
                 .on('presence', { event: 'leave' }, ({ key }) => removeRemoteVisitor(key))
                 .on('broadcast', { event: 'position' }, ({ payload }) => updateRemoteVisitor(payload))
+                .on('broadcast', { event: 'voice-signal' }, ({ payload }) => handleVoiceSignal(payload))
                 .subscribe(async status => {
                     if (status === 'SUBSCRIBED') {
                         multiplayerReady = true;
@@ -1086,6 +1335,7 @@ const audioUpdateInterval = setInterval(updateAudio, 100);
             });
 
             setupMultiplayer();
+            setupVoiceChat();
         }
 
         function animate() {
