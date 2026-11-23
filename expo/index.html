@@ -702,7 +702,7 @@
                     const dx = visitor.group.position.x - getLocalPlayerPosition().x;
                     const dz = visitor.group.position.z - getLocalPlayerPosition().z;
                     const distance = Math.hypot(dx, dz);
-                    const audibleRange = 35;
+                    const audibleRange = 70;
                     if (distance < audibleRange && now >= visitor.nextFootstepAt) {
                         const distanceGain = Math.pow(1 - distance / audibleRange, 1.35);
                         playFootstep(0.095 * distanceGain, 0.92 + (visitor.walkPhase % 1) * 0.12);
