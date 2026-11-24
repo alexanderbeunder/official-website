@@ -306,6 +306,9 @@
                 if (peer.analyserKeepAlive) {
                     try { peer.analyserKeepAlive.disconnect(); } catch (error) {}
                 }
+                if (peer.analyserOutputGain) {
+                    try { peer.analyserOutputGain.disconnect(); } catch (error) {}
+                }
 
                 peer.analyser = voiceAudioContext.createAnalyser();
                 peer.analyser.fftSize = 1024;
@@ -314,11 +317,21 @@
                 peer.analyserSource = voiceAudioContext.createMediaStreamSource(peer.remoteStream);
                 peer.analyserKeepAlive = voiceAudioContext.createGain();
                 peer.analyserKeepAlive.gain.value = 0;
+                peer.analyserOutputGain = voiceAudioContext.createGain();
 
-                // Keep the analyser graph running without playing the stream twice.
+                // On phones, amplify incoming voices locally for this listener.
+                // Desktop keeps normal HTML-audio playback and a silent analyser branch.
+                peer.analyserOutputGain.gain.value = isMobile ? 2.5 : 0;
+
                 peer.analyserSource.connect(peer.analyser);
                 peer.analyser.connect(peer.analyserKeepAlive);
                 peer.analyserKeepAlive.connect(voiceAudioContext.destination);
+
+                if (isMobile) {
+                    peer.analyser.connect(peer.analyserOutputGain);
+                    peer.analyserOutputGain.connect(voiceAudioContext.destination);
+                    if (peer.audio) peer.audio.muted = true;
+                }
             } catch (error) {
                 console.warn('Could not set up incoming voice analyser:', error);
             }
@@ -344,7 +357,8 @@
                 analyser: null,
                 analyserSource: null,
                 analyserData: null,
-                analyserKeepAlive: null
+                analyserKeepAlive: null,
+                analyserOutputGain: null
             };
             voicePeers.set(peerId, peer);
 
@@ -444,6 +458,9 @@
             }
             if (peer.analyserKeepAlive) {
                 try { peer.analyserKeepAlive.disconnect(); } catch (error) {}
+            }
+            if (peer.analyserOutputGain) {
+                try { peer.analyserOutputGain.disconnect(); } catch (error) {}
             }
             if (peer.audio) {
                 peer.audio.pause();
