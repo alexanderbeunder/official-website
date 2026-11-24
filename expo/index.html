@@ -290,6 +290,40 @@
             });
         }
 
+        function setupIncomingVoiceAnalyser(peer) {
+            if (!peer || !peer.remoteStream || !voiceAudioContext) return;
+            try {
+                if (voiceAudioContext.state === 'suspended') {
+                    voiceAudioContext.resume().catch(() => {});
+                }
+
+                if (peer.analyserSource) {
+                    try { peer.analyserSource.disconnect(); } catch (error) {}
+                }
+                if (peer.analyser) {
+                    try { peer.analyser.disconnect(); } catch (error) {}
+                }
+                if (peer.analyserKeepAlive) {
+                    try { peer.analyserKeepAlive.disconnect(); } catch (error) {}
+                }
+
+                peer.analyser = voiceAudioContext.createAnalyser();
+                peer.analyser.fftSize = 1024;
+                peer.analyser.smoothingTimeConstant = 0.25;
+                peer.analyserData = new Uint8Array(peer.analyser.fftSize);
+                peer.analyserSource = voiceAudioContext.createMediaStreamSource(peer.remoteStream);
+                peer.analyserKeepAlive = voiceAudioContext.createGain();
+                peer.analyserKeepAlive.gain.value = 0;
+
+                // Keep the analyser graph running without playing the stream twice.
+                peer.analyserSource.connect(peer.analyser);
+                peer.analyser.connect(peer.analyserKeepAlive);
+                peer.analyserKeepAlive.connect(voiceAudioContext.destination);
+            } catch (error) {
+                console.warn('Could not set up incoming voice analyser:', error);
+            }
+        }
+
         function getPeerConnection(peerId) {
             let peer = voicePeers.get(peerId);
             if (peer) return peer;
@@ -306,9 +340,11 @@
                 isSettingRemoteAnswerPending: false,
                 polite: visitorId.localeCompare(peerId) > 0,
                 audio: null,
+                remoteStream: null,
                 analyser: null,
                 analyserSource: null,
-                analyserData: null
+                analyserData: null,
+                analyserKeepAlive: null
             };
             voicePeers.set(peerId, peer);
 
@@ -333,21 +369,9 @@
                 }
                 const stream = event.streams && event.streams[0];
                 if (stream) {
+                    peer.remoteStream = stream;
                     audio.srcObject = stream;
-                    try {
-                        if (voiceAudioContext) {
-                            if (voiceAudioContext.state === 'suspended') voiceAudioContext.resume().catch(() => {});
-                            if (peer.analyserSource) peer.analyserSource.disconnect();
-                            peer.analyser = voiceAudioContext.createAnalyser();
-                            peer.analyser.fftSize = 512;
-                            peer.analyser.smoothingTimeConstant = 0.45;
-                            peer.analyserData = new Uint8Array(peer.analyser.fftSize);
-                            peer.analyserSource = voiceAudioContext.createMediaStreamSource(stream);
-                            peer.analyserSource.connect(peer.analyser);
-                        }
-                    } catch (error) {
-                        console.warn('Could not analyse incoming voice level:', error);
-                    }
+                    setupIncomingVoiceAnalyser(peer);
                 }
                 audio.play().catch(() => setVoiceStatus('Click the page to allow audio playback'));
             };
@@ -417,6 +441,9 @@
             }
             if (peer.analyser) {
                 try { peer.analyser.disconnect(); } catch (error) {}
+            }
+            if (peer.analyserKeepAlive) {
+                try { peer.analyserKeepAlive.disconnect(); } catch (error) {}
             }
             if (peer.audio) {
                 peer.audio.pause();
@@ -496,6 +523,9 @@
                     if (!voiceAudioContext) voiceAudioContext = new AudioContextClass();
                     if (voiceAudioContext.state === 'suspended') {
                         await voiceAudioContext.resume();
+                    }
+                    for (const peer of voicePeers.values()) {
+                        if (peer.remoteStream) setupIncomingVoiceAnalyser(peer);
                     }
                 }
 
@@ -687,7 +717,6 @@
                 let level = 0;
                 if (
                     voicePeer &&
-                    voicePeer.pc.connectionState === 'connected' &&
                     voicePeer.analyser &&
                     voicePeer.analyserData
                 ) {
