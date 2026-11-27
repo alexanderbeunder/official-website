@@ -1191,6 +1191,101 @@
                 scene.add(grid);
             }
 
+            // Reusable gallery builder. Add new halls by calling createGallery({...})
+            // in the hall-creation section near the bottom of init().
+            function createGallery(config) {
+                const {
+                    name = 'New gallery',
+                    x = 200,
+                    z = 0,
+                    width = 50,
+                    height = 15,
+                    depth = 30,
+                    images = [],
+                    videos = []
+                } = config;
+
+                const wall = new THREE.MeshBasicMaterial({
+                    color: 0xffffff, side: THREE.BackSide,
+                    transparent: true, opacity: 0.5
+                });
+                const floor = new THREE.MeshBasicMaterial({
+                    color: 0xf2f2f2, side: THREE.BackSide
+                });
+                const ceiling = new THREE.MeshBasicMaterial({
+                    color: 0xffffff, side: THREE.BackSide
+                });
+                const shell = new THREE.Mesh(
+                    new THREE.BoxGeometry(width, height, depth),
+                    [wall, wall, ceiling, floor, wall, wall]
+                );
+                shell.position.set(x, 0, z);
+                shell.name = name;
+                scene.add(shell);
+
+                // Wall names: front (-Z), back (+Z), left (-X), right (+X).
+                function wallTransform(item) {
+                    const inset = 0.52;
+                    const px = item.x || 0, py = item.y ?? 3;
+                    if (item.wall === 'back') return {
+                        position: [x + px, py, z + depth / 2 - inset], rotation: 0
+                    };
+                    if (item.wall === 'left') return {
+                        position: [x - width / 2 + inset, py, z + (item.z || 0)], rotation: Math.PI / 2
+                    };
+                    if (item.wall === 'right') return {
+                        position: [x + width / 2 - inset, py, z + (item.z || 0)], rotation: -Math.PI / 2
+                    };
+                    return {
+                        position: [x + px, py, z - depth / 2 + inset], rotation: 0
+                    };
+                }
+
+                images.forEach(item => {
+                    if (!item.url) return;
+                    const texture = loadSharedTexture(item.url);
+                    const mesh = new THREE.Mesh(
+                        new THREE.PlaneGeometry(item.width || 4, item.height || 4),
+                        new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide })
+                    );
+                    const t = wallTransform(item);
+                    mesh.position.set(...t.position);
+                    mesh.rotation.y = t.rotation;
+                    mesh.name = item.title || 'Gallery artwork';
+                    scene.add(mesh);
+                });
+
+                videos.forEach((item, index) => {
+                    if (!item.url) return;
+                    const video = document.createElement('video');
+                    video.src = item.url;
+                    video.loop = item.loop !== false;
+                    video.muted = item.muted !== false;
+                    video.autoplay = true;
+                    video.playsInline = true;
+                    video.crossOrigin = 'anonymous';
+                    video.preload = 'auto';
+                    video.play().catch(() => {});
+                    const texture = new THREE.VideoTexture(video);
+                    texture.minFilter = THREE.LinearFilter;
+                    texture.magFilter = THREE.LinearFilter;
+                    const mesh = new THREE.Mesh(
+                        new THREE.PlaneGeometry(item.width || 6, item.height || 3.5),
+                        new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide })
+                    );
+                    const t = wallTransform(item);
+                    mesh.position.set(...t.position);
+                    mesh.rotation.y = t.rotation;
+                    mesh.name = item.title || `${name} video ${index + 1}`;
+                    scene.add(mesh);
+                    // Keep references so browser video elements remain alive.
+                    if (!window.galleryVideoElements) window.galleryVideoElements = [];
+                    window.galleryVideoElements.push({ name, video, mesh, texture });
+                });
+
+                console.info(`Created ${name} at (${x}, ${z})`);
+            }
+
             function createCotopaxi() {
                 const rings = [[42,-7.49],[35,-5],[28,0],[22,7],[16,16],[11,26],[7,35],[4,41],[1.2,39.5]];
                 const segments=24, positions=[], colors=[];
@@ -1825,6 +1920,27 @@ const audioUpdateInterval = setInterval(updateAudio, 100);
             createCotopaxi(); // Landmark behind the original spawn.
             createRoom(0);  // First room
             createRoom2(100); // Second room, offset by 100 units
+
+            // TEMPLATE FOR AN EXTRA HALL — copy this block, change its values,
+            // and remove the comment markers to create your own gallery.
+            /*
+            createGallery({
+                name: 'Gallery 3',
+                x: 200,                 // hall centre on the X axis
+                z: 0,                   // hall centre on the Z axis
+                width: 50,
+                height: 15,
+                depth: 30,
+                images: [
+                    { url: './images/work-01.jpg', wall: 'front', x: -12, y: 3, width: 5, height: 5 },
+                    { url: './images/work-02.jpg', wall: 'front', x: 0,   y: 3, width: 5, height: 5 },
+                    { url: './images/work-03.jpg', wall: 'right', z: -5,  y: 3, width: 5, height: 5 }
+                ],
+                videos: [
+                    { url: './videos/film-01.mp4', wall: 'back', x: 0, y: 3, width: 7, height: 4 }
+                ]
+            });
+            */
 
             window.addEventListener('resize', () => {
                 camera.aspect = window.innerWidth / window.innerHeight;
