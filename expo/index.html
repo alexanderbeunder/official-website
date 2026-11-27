@@ -33,16 +33,14 @@
     display: inline-block;
 }
 
-        /* Mobile joystick: same placement as the other 3D room. */
+        /* Mobile: fixed analogue movement joystick at bottom-left. */
         #joystick-container {
-            position: fixed; bottom: 20px; left: 20px;
+            position: fixed; bottom: 28px; left: 28px;
             width: 150px; height: 150px; z-index: 1100;
             display: none; touch-action: none;
         }
         .mobile-controls {
-            position: fixed; bottom: 60px; right: 20px;
-            display: none; justify-content: center; align-items: center;
-            gap: 20px; z-index: 1100;
+            display: none;
         }
         .mobile-controls-up {
             position: fixed; bottom: 110px; right: 50px;
@@ -52,7 +50,6 @@
             position: fixed; bottom: 10px; right: 50px;
             display: none; z-index: 1100;
         }
-        .mobile-controls button,
         .mobile-controls-up button,
         .mobile-controls-down button {
             width: 40px; height: 40px; font-size: 20px;
@@ -178,10 +175,6 @@
     </div>
     <div id="instructions"> <span class="black-box">Click to enter</span><br /><br />Controls: WASD & mouse · ↑ / ↓ = up / down</div>
     <div id="joystick-container"></div>
-    <div class="mobile-controls">
-        <button id="rotateLeft" type="button">◀</button>
-        <button id="rotateRight" type="button">▶</button>
-    </div>
     <div class="mobile-controls-up"><button id="moveUp" type="button">▲</button></div>
     <div class="mobile-controls-down"><button id="moveDown" type="button">▼</button></div>
 
@@ -992,9 +985,14 @@
         const isMobile = window.matchMedia('(pointer: coarse)').matches || /Android|iPhone|iPad|iPod|Mobi/i.test(navigator.userAgent);
         let moveX = 0, moveZ = 0;
         let moveUp = false, moveDown = false;
-        let rotateLeft = false, rotateRight = false;
         const mobileMoveSpeed = 0.2; // scaled for this smaller room
-        const rotationSpeed = 0.05;
+        // Swipe-look state: only a drag that starts on the right half of the screen
+        // rotates the view. Pointer IDs keep this separate from the left joystick.
+        let lookPointerId = null;
+        let lastLookX = 0;
+        let lastLookY = 0;
+        const lookSensitivity = 0.004;
+        const maxLookPitch = Math.PI * 0.48;
 
         init();
         animate();
@@ -1035,11 +1033,12 @@
                 controls.getObject().position.set(50, 2.5, 70);
                 scene.add(controls.getObject());
             } else {
-                // Mobile controls: same joystick and four buttons as the other 3D room.
+                // Mobile controls: fixed joystick on the left, swipe anywhere on
+                // the right half to look around, and vertical buttons on the right.
                 camera.position.set(50, 2.5, 70);
                 camera.rotation.order = 'YXZ';
                 const intro = document.getElementById('instructions');
-                intro.innerHTML = '<span class="black-box">Tap to enter</span><br /><br />Turn your mobile to horizontal view and use the invisible joystick (bottom left) to move around:<br />Forward / backward / left / right<br /><br />◀ and ▶ = turn left and right<br />▲ and ▼ = move up and down';
+                intro.innerHTML = '<span class="black-box">Tap to enter</span><br /><br />Use the joystick on the left to move.<br />Drag your finger on the right side to look around.<br />▲ and ▼ = move up and down';
                 intro.addEventListener('click', () => {
                     intro.style.display = 'none';
                     getFootstepAudioContext();
@@ -1052,9 +1051,12 @@
                 if (window.nipplejs) {
                     const joystick = nipplejs.create({
                         zone: document.getElementById('joystick-container'),
-                        mode: 'dynamic',
+                        mode: 'static',
                         position: { left: '50%', top: '50%' },
-                        color: 'grey'
+                        color: 'grey',
+                        size: 120,
+                        threshold: 0.08,
+                        fadeTime: 100
                     });
                     joystick.on('move', (evt, data) => {
                         if (!data || !data.angle) return;
@@ -1081,10 +1083,36 @@
                     button.addEventListener('mouseup', () => setter(false));
                     button.addEventListener('mouseleave', () => setter(false));
                 };
-                bindHold('rotateLeft', value => rotateLeft = value);
-                bindHold('rotateRight', value => rotateRight = value);
                 bindHold('moveUp', value => moveUp = value);
                 bindHold('moveDown', value => moveDown = value);
+
+                // Dragging on the right half of the canvas rotates the camera.
+                // The left joystick and on-screen buttons retain their own touch input.
+                renderer.domElement.addEventListener('pointerdown', event => {
+                    if (event.pointerType === 'mouse' || event.clientX < window.innerWidth * 0.42) return;
+                    if (lookPointerId !== null) return;
+                    lookPointerId = event.pointerId;
+                    lastLookX = event.clientX;
+                    lastLookY = event.clientY;
+                    try { renderer.domElement.setPointerCapture(event.pointerId); } catch (error) {}
+                });
+                renderer.domElement.addEventListener('pointermove', event => {
+                    if (event.pointerId !== lookPointerId) return;
+                    const deltaX = event.clientX - lastLookX;
+                    const deltaY = event.clientY - lastLookY;
+                    lastLookX = event.clientX;
+                    lastLookY = event.clientY;
+                    camera.rotation.y -= deltaX * lookSensitivity;
+                    camera.rotation.x -= deltaY * lookSensitivity;
+                    camera.rotation.x = Math.max(-maxLookPitch, Math.min(maxLookPitch, camera.rotation.x));
+                });
+                const endLook = event => {
+                    if (event.pointerId !== lookPointerId) return;
+                    lookPointerId = null;
+                };
+                renderer.domElement.addEventListener('pointerup', endLook);
+                renderer.domElement.addEventListener('pointercancel', endLook);
+                renderer.domElement.addEventListener('lostpointercapture', endLook);
             }
 
             // Reuse textures when the same image URL appears more than once.
@@ -1808,8 +1836,6 @@ const audioUpdateInterval = setInterval(updateAudio, 100);
                 camera.position.y += (Number(moveUp) - Number(moveDown)) * mobileMoveSpeed;
                 // Same floor/standing-height limit as desktop.
                 camera.position.y = Math.max(2.5, camera.position.y);
-                if (rotateLeft) camera.rotation.y += rotationSpeed;
-                if (rotateRight) camera.rotation.y -= rotationSpeed;
             }
 
             const movedDistance = Math.hypot(localPlayer.x - localStartX, localPlayer.z - localStartZ);
