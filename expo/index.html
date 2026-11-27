@@ -864,23 +864,20 @@
             return controls ? controls.getObject().position : camera.position;
         }
 
+        // Cotopaxi's collision profile: broad lower flanks and a less abrupt summit.
         const COTOPAXI_X = 50, COTOPAXI_Z = 120;
-        const COTOPAXI_BASE_RADIUS = 30, COTOPAXI_FLOOR_Y = -7.49;
-
         function getCotopaxiGroundHeight(x, z) {
             const r = Math.hypot(x - COTOPAXI_X, z - COTOPAXI_Z);
-            if (r >= COTOPAXI_BASE_RADIUS) return COTOPAXI_FLOOR_Y;
-            const profile = [[30,-7.49],[24,0],[18,10],[12,22],[8,34],[5,43],[3,47],[0,42]];
-            for (let i = 0; i < profile.length - 1; i++) {
-                const [ro, ho] = profile[i], [ri, hi] = profile[i + 1];
-                if (r <= ro && r >= ri) return ho + (hi - ho) * ((ro - r) / (ro - ri));
+            const profile = [[42,-7.49],[35,-5],[28,0],[22,7],[16,16],[11,26],[7,35],[4,41],[0,39]];
+            if (r >= profile[0][0]) return -7.49;
+            for (let i=0; i<profile.length-1; i++) {
+                const [rOuter,hOuter]=profile[i], [rInner,hInner]=profile[i+1];
+                if (r <= rOuter && r >= rInner) {
+                    const t=(rOuter-r)/(rOuter-rInner);
+                    return hOuter+(hInner-hOuter)*t;
+                }
             }
-            return 42;
-        }
-
-        function keepPlayerOnCotopaxi() {
-            const player = getLocalPlayerPosition();
-            player.y = Math.max(2.5, getCotopaxiGroundHeight(player.x, player.z) + 2.5);
+            return 39;
         }
 
         function currentVisitorPosition() {
@@ -1189,52 +1186,41 @@
             }
 
             function createCotopaxi() {
-                // Faceted stratovolcano, with a broad base, steep upper cone and snowy summit.
-                const rings = [[30,-7.49],[24,0],[18,10],[12,22],[8,34],[5,43],[3,47],[1.25,45.5]];
-                const segments = 18, positions = [], colors = [];
-                const palette = [0x75604b,0x8b7358,0x9b8a72,0xb8b6ad,0xe7e8e5,0xffffff]
-                    .map(c => new THREE.Color(c));
-                const vertices = rings.map(([radius,height],ri) =>
-                    Array.from({length:segments},(_,j) => {
-                        const a=j/segments*Math.PI*2;
-                        const wobble=ri===0?1:1+0.035*Math.sin(j*2.17+ri*1.4);
-                        return [COTOPAXI_X+Math.cos(a)*radius*wobble,
-                            height+(ri>1?0.55*Math.sin(j*1.73+ri):0),
-                            COTOPAXI_Z+Math.sin(a)*radius*wobble];
-                    })
-                );
-                const tri=(a,b,c,col)=>[a,b,c].forEach(v=>{
-                    positions.push(...v); colors.push(col.r,col.g,col.b);
+                const rings = [[42,-7.49],[35,-5],[28,0],[22,7],[16,16],[11,26],[7,35],[4,41],[1.2,39.5]];
+                const segments=24, positions=[], colors=[];
+                const palette=[0x514638,0x6f604d,0x88765d,0xa49781,0xc7c6bf,0xe9eae7,0xffffff]
+                    .map(c=>new THREE.Color(c));
+                const vertices=rings.map(([radius,height],ri)=>Array.from({length:segments},(_,j)=>{
+                    const a=j/segments*Math.PI*2;
+                    const wobble=1+0.025*Math.sin(j*1.8+ri*1.2);
+                    return [COTOPAXI_X+Math.cos(a)*radius*wobble,
+                        height+(ri>1?0.35*Math.sin(j*1.4+ri):0),
+                        COTOPAXI_Z+Math.sin(a)*radius*wobble];
+                }));
+                const triangle=(a,b,c,col)=>[a,b,c].forEach(v=>{
+                    positions.push(v[0],v[1],v[2]); colors.push(col.r,col.g,col.b);
                 });
                 for(let r=0;r<vertices.length-1;r++) for(let j=0;j<segments;j++){
                     const n=(j+1)%segments, a=vertices[r][j], b=vertices[r][n],
                         c=vertices[r+1][j], d=vertices[r+1][n];
-                    const band=r<=1?(j%4===0?1:0):r<=3?(j%3===0?2:1):(j%4===0?3:4);
-                    tri(a,b,c,palette[band]); tri(b,d,c,palette[band]);
+                    const band=r<2?(j%4===0?1:0):r<4?(j%3===0?3:2):(j%4===0?5:4);
+                    triangle(a,b,c,palette[band]); triangle(b,d,c,palette[band]);
                 }
-                const summit=[COTOPAXI_X,42,COTOPAXI_Z], top=vertices[vertices.length-1];
-                for(let j=0;j<segments;j++) tri(top[j],top[(j+1)%segments],summit,palette[j%5===0?3:4]);
-
-                const geo=new THREE.BufferGeometry();
-                geo.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));
-                geo.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));
-                geo.computeVertexNormals();
-                scene.add(new THREE.Mesh(geo,new THREE.MeshBasicMaterial({
+                const summit=[COTOPAXI_X,39,COTOPAXI_Z], top=vertices[vertices.length-1];
+                for(let j=0;j<segments;j++) triangle(top[j],top[(j+1)%segments],summit,palette[j%4===0?4:5]);
+                const geometry=new THREE.BufferGeometry();
+                geometry.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));
+                geometry.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));
+                geometry.computeVertexNormals();
+                const mountain=new THREE.Mesh(geometry,new THREE.MeshBasicMaterial({
                     vertexColors:true,side:THREE.DoubleSide,flatShading:true
-                })));
+                }));
+                mountain.name='Cotopaxi low-poly volcano'; scene.add(mountain);
 
-                // A dark summit crater and angular white glacier facets.
-                const crater=new THREE.Mesh(new THREE.CylinderGeometry(1.0,2.0,1.2,12,1,true),
-                    new THREE.MeshBasicMaterial({color:0x55514d,side:THREE.DoubleSide}));
-                crater.position.set(COTOPAXI_X,43.2,COTOPAXI_Z); scene.add(crater);
-                const snowMat=new THREE.MeshBasicMaterial({color:0xf3f4f1,side:THREE.DoubleSide});
-                for(let j=0;j<6;j++){
-                    const a=j/6*Math.PI*2+0.18;
-                    const snow=new THREE.Mesh(new THREE.ConeGeometry(3.2,16,3,1,true),snowMat);
-                    snow.position.set(COTOPAXI_X+Math.cos(a)*8.5,34.5,COTOPAXI_Z+Math.sin(a)*8.5);
-                    snow.rotation.set(Math.sin(a)*0.42, a, Math.cos(a)*0.42);
-                    scene.add(snow);
-                }
+                // Dark crater opening at the snowy summit.
+                const crater=new THREE.Mesh(new THREE.CylinderGeometry(1.2,2.4,1,16,1,true),
+                    new THREE.MeshBasicMaterial({color:0x49443e,side:THREE.DoubleSide}));
+                crater.position.set(COTOPAXI_X,39.8,COTOPAXI_Z); scene.add(crater);
             }
 
             function createRoom(positionX) {
@@ -1830,7 +1816,8 @@ const audioUpdateInterval = setInterval(updateAudio, 100);
 
 
             addFloorGrid(); // Continuous floor grid across both halls and surrounding space.
-            createCotopaxi(); // Landmark behind the original spawn.\n            createRoom(0);  // First room
+            createCotopaxi(); // Landmark behind the original spawn.
+            createRoom(0);  // First room
             createRoom2(100); // Second room, offset by 100 units
 
             window.addEventListener('resize', () => {
@@ -1906,8 +1893,10 @@ const audioUpdateInterval = setInterval(updateAudio, 100);
                 camera.position.y = Math.max(2.5, camera.position.y);
             }
 
-            // Follow the volcano's surface: the player climbs its slope instead of crossing its mesh.
-            keepPlayerOnCotopaxi();
+            const mountainGround = getCotopaxiGroundHeight(localPlayer.x, localPlayer.z);
+            if (mountainGround > -7.49) {
+                localPlayer.y = Math.max(localPlayer.y, mountainGround + 2.5);
+            }
 
             const movedDistance = Math.hypot(localPlayer.x - localStartX, localPlayer.z - localStartZ);
             if (movedDistance > 0.0015 && frameTime >= nextLocalFootstepAt) {
