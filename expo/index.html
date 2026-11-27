@@ -1002,6 +1002,12 @@
         let moveX = 0, moveZ = 0;
         let moveUp = false, moveDown = false;
         const mobileMoveSpeed = 0.2; // scaled for this smaller room
+
+        // Tweak these two values to tune how the player settles back onto the ground.
+        // Higher = faster. Normal terrain-following stays quick for natural downhill walking.
+        const TERRAIN_FOLLOW_SPEED = 8.0;
+        const FLIGHT_DESCENT_SPEED = 1.8;
+        let isAirborne = false;
         // Swipe-look state: only a drag that starts on the right half of the screen
         // rotates the view. Pointer IDs keep this separate from the left joystick.
         let lookPointerId = null;
@@ -1893,14 +1899,17 @@ const audioUpdateInterval = setInterval(updateAudio, 100);
                 camera.position.y = Math.max(2.5, camera.position.y);
             }
 
-            // Keep the player's feet on the terrain in BOTH directions.
-            // Previously this only raised the player when climbing, so descending
-            // left the camera suspended at the summit height. Manual fly controls
-            // temporarily override terrain-following; otherwise ease toward ground.
+            // Manual vertical controls put the player in flight mode.
+            // After release, use a gentle descent; ordinary walking still follows
+            // the volcano's changing slope at the normal, more responsive rate.
+            if (moveUp || moveDown) isAirborne = true;
             if (!moveUp && !moveDown) {
                 const groundEyeHeight = Math.max(2.5,
                     getCotopaxiGroundHeight(localPlayer.x, localPlayer.z) + 2.5);
-                localPlayer.y += (groundEyeHeight - localPlayer.y) * Math.min(1, deltaSeconds * 8);
+                const heightDifference = localPlayer.y - groundEyeHeight;
+                const followSpeed = isAirborne ? FLIGHT_DESCENT_SPEED : TERRAIN_FOLLOW_SPEED;
+                localPlayer.y += (groundEyeHeight - localPlayer.y) * Math.min(1, deltaSeconds * followSpeed);
+                if (Math.abs(heightDifference) < 0.12) isAirborne = false;
             }
 
             const movedDistance = Math.hypot(localPlayer.x - localStartX, localPlayer.z - localStartZ);
