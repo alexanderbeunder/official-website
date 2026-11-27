@@ -1893,9 +1893,14 @@ const audioUpdateInterval = setInterval(updateAudio, 100);
                 camera.position.y = Math.max(2.5, camera.position.y);
             }
 
-            const mountainGround = getCotopaxiGroundHeight(localPlayer.x, localPlayer.z);
-            if (mountainGround > -7.49) {
-                localPlayer.y = Math.max(localPlayer.y, mountainGround + 2.5);
+            // Keep the player's feet on the terrain in BOTH directions.
+            // Previously this only raised the player when climbing, so descending
+            // left the camera suspended at the summit height. Manual fly controls
+            // temporarily override terrain-following; otherwise ease toward ground.
+            if (!moveUp && !moveDown) {
+                const groundEyeHeight = Math.max(2.5,
+                    getCotopaxiGroundHeight(localPlayer.x, localPlayer.z) + 2.5);
+                localPlayer.y += (groundEyeHeight - localPlayer.y) * Math.min(1, deltaSeconds * 8);
             }
 
             const movedDistance = Math.hypot(localPlayer.x - localStartX, localPlayer.z - localStartZ);
