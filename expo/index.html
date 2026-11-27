@@ -344,7 +344,10 @@
                 analyser: null,
                 analyserSource: null,
                 analyserData: null,
-                analyserKeepAlive: null
+                analyserKeepAlive: null,
+                // ICE candidates can arrive before the remote description.
+                pendingCandidates: [],
+                disconnectTimer: null
             };
             voicePeers.set(peerId, peer);
 
@@ -377,8 +380,34 @@
             };
 
             pc.onconnectionstatechange = () => {
-                if (pc.connectionState === 'failed' || pc.connectionState === 'closed' || pc.connectionState === 'disconnected') {
-                    if (pc.connectionState !== 'disconnected') closeVoicePeer(peerId);
+                const state = pc.connectionState;
+
+                if (state === 'connected') {
+                    if (peer.disconnectTimer) {
+                        clearTimeout(peer.disconnectTimer);
+                        peer.disconnectTimer = null;
+                    }
+                    return;
+                }
+
+                if (state === 'failed' || state === 'closed') {
+                    closeVoicePeer(peerId);
+                    return;
+                }
+
+                // "disconnected" is often temporary (especially on mobile/Wi-Fi).
+                // Give ICE a few seconds to recover before rebuilding the peer.
+                if (state === 'disconnected' && !peer.disconnectTimer) {
+                    peer.disconnectTimer = setTimeout(() => {
+                        peer.disconnectTimer = null;
+                        if (pc.connectionState === 'disconnected' ||
+                            pc.connectionState === 'failed') {
+                            closeVoicePeer(peerId);
+                            // updateProximityVoice() will create a fresh peer if
+                            // the visitor is still nearby and the mic is enabled.
+                            updateProximityVoice();
+                        }
+                    }, 8000);
                 }
             };
 
@@ -416,25 +445,58 @@
                     await pc.setRemoteDescription(description);
                     peer.isSettingRemoteAnswerPending = false;
 
+                    // Apply candidates that arrived before setRemoteDescription completed.
+                    if (peer.pendingCandidates.length) {
+                        const queuedCandidates = peer.pendingCandidates.splice(0);
+                        for (const candidate of queuedCandidates) {
+                            try {
+                                await pc.addIceCandidate(candidate);
+                            } catch (error) {
+                                if (!peer.ignoreOffer) {
+                                    console.warn('Could not apply queued ICE candidate:', error);
+                                }
+                            }
+                        }
+                    }
+
                     if (description.type === 'offer') {
                         await pc.setLocalDescription();
                         sendVoiceSignal(peerId, { description: pc.localDescription });
                     }
                 } else if (message.candidate) {
-                    try {
-                        await pc.addIceCandidate(message.candidate);
-                    } catch (error) {
-                        if (!peer.ignoreOffer) throw error;
+                    // Candidates may be broadcast before the matching offer/answer
+                    // reaches this browser. Queue them instead of dropping them.
+                    if (peer.ignoreOffer) return;
+
+                    if (!pc.remoteDescription || !pc.remoteDescription.type) {
+                        peer.pendingCandidates.push(message.candidate);
+                    } else {
+                        try {
+                            await pc.addIceCandidate(message.candidate);
+                        } catch (error) {
+                            if (!peer.ignoreOffer) {
+                                console.warn('Could not add ICE candidate:', error);
+                            }
+                        }
                     }
                 }
             } catch (error) {
-                console.warn('Voice signal error:', error);
+                console.warn('Voice signal error:', error, {
+                    peerId,
+                    signalingState: pc.signalingState,
+                    connectionState: pc.connectionState,
+                    hasRemoteDescription: !!pc.remoteDescription
+                });
             }
         }
 
         function closeVoicePeer(peerId) {
             const peer = voicePeers.get(peerId);
             if (!peer) return;
+            if (peer.disconnectTimer) {
+                clearTimeout(peer.disconnectTimer);
+                peer.disconnectTimer = null;
+            }
             try { peer.pc.ontrack = null; peer.pc.close(); } catch (error) {}
             if (peer.analyserSource) {
                 try { peer.analyserSource.disconnect(); } catch (error) {}
@@ -526,6 +588,16 @@
                     }
                     for (const peer of voicePeers.values()) {
                         if (peer.remoteStream) setupIncomingVoiceAnalyser(peer);
+                    }
+                }
+
+                // A tap/click is also a user gesture: retry playback for peers whose
+                // browser previously blocked autoplay.
+                for (const peer of voicePeers.values()) {
+                    if (peer.audio) {
+                        peer.audio.play().catch(() => {
+                            setVoiceStatus('Audio playback blocked · tap the page or check device sound');
+                        });
                     }
                 }
 
