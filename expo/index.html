@@ -209,8 +209,8 @@
         let lastPositionBroadcast = 0;
 
         // Proximity voice chat: audio is sent peer-to-peer with WebRTC.
-        const VOICE_HEAR_DISTANCE = 12;
-        const VOICE_DISCONNECT_DISTANCE = 15;
+        const VOICE_HEAR_DISTANCE = 50;
+        const VOICE_DISCONNECT_DISTANCE = 60;
         const voicePeers = new Map();
         let localMicrophoneStream = null;
         let voiceAudioContext = null;
