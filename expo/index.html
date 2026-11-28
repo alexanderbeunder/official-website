@@ -173,6 +173,7 @@
         <button id="restartVideosBtn" type="button" aria-label="Restart video with sound" title="Restart video with sound">R</button>
         <button id="muteVideosBtn" type="button" aria-label="Mute video" title="Mute video">M</button>
     </div>
+    <div id="galleryVideoPrompt" style="display:none; position:fixed; left:50%; bottom:24px; transform:translateX(-50%); z-index:1100; padding:8px 12px; color:white; background:rgba(0,0,0,.72); border-radius:4px; font:14px monospace; text-align:center; pointer-events:none;"></div>
     <div id="instructions"> <span class="black-box">Click to enter</span><br /><br />Controls: WASD & mouse · ↑ / ↓ = up / down</div>
     <div id="joystick-container"></div>
     <div class="mobile-controls-up"><button id="moveUp" type="button">▲</button></div>
@@ -184,6 +185,10 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
         let scene, camera, renderer, controls;
+        const galleryVideoElements = [];
+        let activeGalleryVideo = null;
+        const GALLERY_VIDEO_HEAR_DISTANCE = 10;
+        const GALLERY_VIDEO_MAX_VOLUME_DISTANCE = 2;
         // Multiplayer: add your Supabase project URL and publishable/anon key here.
         // These are intended for browser use; protect the project with the SQL policies below.
         const SUPABASE_URL = 'https://lijoylwdgdumscovodap.supabase.co';
@@ -864,6 +869,62 @@
             return controls ? controls.getObject().position : camera.position;
         }
 
+        function updateGalleryVideoProximity() {
+            if (!galleryVideoElements.length || !camera) return;
+            const viewer = getLocalPlayerPosition();
+            let nearest = null, nearestDistance = Infinity;
+
+            galleryVideoElements.forEach(entry => {
+                const distance = viewer.distanceTo(entry.mesh.position);
+                const volume = distance < GALLERY_VIDEO_HEAR_DISTANCE
+                    ? Math.max(0, Math.min(1, 1 - Math.max(0, distance - GALLERY_VIDEO_MAX_VOLUME_DISTANCE) /
+                        (GALLERY_VIDEO_HEAR_DISTANCE - GALLERY_VIDEO_MAX_VOLUME_DISTANCE)))
+                    : 0;
+                entry.video.volume = volume;
+                if (distance < nearestDistance) {
+                    nearestDistance = distance;
+                    nearest = entry;
+                }
+            });
+
+            activeGalleryVideo = nearestDistance <= GALLERY_VIDEO_HEAR_DISTANCE ? nearest : null;
+            const prompt = document.getElementById('galleryVideoPrompt');
+            const controlsPanel = document.getElementById('videoControls');
+            const mobile = window.matchMedia('(max-width: 1024px), (pointer: coarse)').matches;
+
+            if (prompt) {
+                prompt.style.display = activeGalleryVideo ? 'block' : 'none';
+                if (activeGalleryVideo) {
+                    prompt.textContent = `${activeGalleryVideo.title}: R = restart with sound · M = mute`;
+                }
+            }
+            // Reuse the existing R/M touch controls for every gallery video.
+            if (controlsPanel && mobile) {
+                controlsPanel.style.display = activeGalleryVideo ? 'flex' : 'none';
+            }
+        }
+
+        function restartActiveGalleryVideo() {
+            if (!activeGalleryVideo) return;
+            activeGalleryVideo.video.currentTime = 0;
+            activeGalleryVideo.video.muted = false;
+            activeGalleryVideo.video.play().catch(() => {});
+        }
+
+        function toggleActiveGalleryVideoMute() {
+            if (!activeGalleryVideo) return;
+            activeGalleryVideo.video.muted = !activeGalleryVideo.video.muted;
+        }
+
+        document.addEventListener('keydown', event => {
+            if (!activeGalleryVideo) return;
+            if (event.code === 'KeyR') restartActiveGalleryVideo();
+            if (event.code === 'KeyM') toggleActiveGalleryVideoMute();
+        });
+
+        document.getElementById('restartVideosBtn').addEventListener('click', restartActiveGalleryVideo);
+        document.getElementById('muteVideosBtn').addEventListener('click', toggleActiveGalleryVideoMute);
+
         // Cotopaxi's collision profile: broad lower flanks and a less abrupt summit.
         const COTOPAXI_X = 50, COTOPAXI_Z = 120;
         function getCotopaxiGroundHeight(x, z) {
@@ -1279,8 +1340,11 @@
                     mesh.name = item.title || `${name} video ${index + 1}`;
                     scene.add(mesh);
                     // Keep references so browser video elements remain alive.
-                    if (!window.galleryVideoElements) window.galleryVideoElements = [];
-                    window.galleryVideoElements.push({ name, video, mesh, texture });
+                    galleryVideoElements.push({
+                        name,
+                        title: item.title || `${name} video ${index + 1}`,
+                        video, mesh, texture
+                    });
                 });
 
                 console.info(`Created ${name} at (${x}, ${z})`);
@@ -1870,7 +1934,7 @@ function updateAudio() {
     // same 10-unit proximity range used by the nearby-video instructions.
     const isMobileDevice = window.matchMedia('(max-width: 1024px), (pointer: coarse)').matches;
     const videoControls = document.getElementById('videoControls');
-    videoControls.style.display = (isMobileDevice && (instructionsVisible || instructions2Visible)) ? 'flex' : 'none';
+    videoControls.style.display = (isMobileDevice && (instructionsVisible || instructions2Visible || activeGalleryVideo)) ? 'flex' : 'none';
 
     // Update the video volume for both screens
     video2.volume = Math.max(0, Math.min(1, volume2)); // Keep volume between 0 and 1
@@ -1982,6 +2046,7 @@ const audioUpdateInterval = setInterval(updateAudio, 100);
             animate.lastFrameTime = frameTime;
             animateRemoteVisitors(deltaSeconds);
             if (welcomeVideoTexture) updateWelcomeSprite(frameTime);
+            updateGalleryVideoProximity();
             broadcastVisitorPosition(frameTime);
             const localPlayer = getLocalPlayerPosition();
             const localStartX = localPlayer.x;
